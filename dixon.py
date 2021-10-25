@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-import pickle, warnings
-from scipy.stats import poisson, skellam
-from scipy.optimize import minimize, fmin
-from multiprocessing import Pool
-import matplotlib.pyplot as plt
+import  warnings,sys, os
+from scipy.stats import poisson
+from scipy.optimize import minimize
 
 warnings.filterwarnings('ignore')
 
@@ -36,6 +34,7 @@ def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=10):
 
 def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
                            constraints=[{'type': 'eq', 'fun': lambda x: sum(x[:20]) - 20}], **kwargs):
+
     teams = np.sort(dataset['HomeTeam'].unique())
     # check for no weirdness in dataset
     away_teams = np.sort(dataset['AwayTeam'].unique())
@@ -64,7 +63,9 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
                               rho, gamma, row.time_diff, xi=xi) for row in dataset.itertuples()]
         return -sum(log_like)
 
+    sys.stdout = open(os.devnull, 'w')
     opt_output = minimize(estimate_paramters, init_vals, options=options, constraints=constraints)
+    sys.stdout = sys.__stdout__
     if debug:
         # sort of hacky way to investigate the output of the optimisation process
         return opt_output
@@ -74,7 +75,7 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
                         ['rho', 'home_adv'],
                         opt_output.x))
 
-def resultdef(result):
+def resultdef(result, ht, at, divis, mdata):
     under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
                result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
@@ -92,52 +93,129 @@ def resultdef(result):
     gg = np.sum(goalgoal)
 
 
-    dict = {'over1_5': over1_5,
-            'over2_5': over2_5,
-            'over3_5': over3_5,
-            'home':home,
-            'away':away,
-            'draw': draw,
-            'goalgoal': gg,
-            'under1_5': under1_5,
-            'under2_5': under2_5,
-            'under3_5': under3_5,
+    dict = {'O1_5': over1_5,
+            'O2_5': over2_5,
+            'O3_5': over3_5,
+            '1':home,
+            '2':away,
+            'X': draw,
+            'GG': gg,
+            'U1_5': under1_5,
+            'U2_5': under2_5,
+            'U3_5': under3_5,
             }
 
-    outcome = list()
+    outcome = pd.DataFrame(columns=['Division', 'Date', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %'])
     for res in dict.keys():
         if dict[res] > 0.7:
-            outcome.append([res, dict[res]])
+            outcome.loc[len(outcome)] = [divis, mdata, ht, at, res, dict[res]]
 
     return(outcome)
 
+def def_league(lg):
+    if lg == 1:
+        csvl = F"mmz4281/{YEAR}/E0.csv"
+        divis = csvl[13:15]
+    elif lg == 2:
+        csvl = F"mmz4281/{YEAR}/E1.csv"
+        divis = csvl[13:15]
+    elif lg == 3:
+        csvl = F"mmz4281/{YEAR}/D1.csv"
+        divis = csvl[13:15]
+    elif lg == 4:
+        csvl = F"mmz4281/{YEAR}/I1.csv"
+        divis = csvl[13:15]
+    elif lg == 5:
+        csvl = F"mmz4281/{YEAR}/SP1.csv"
+        divis = csvl[13:16]
+    elif lg == 6:
+        csvl = F"mmz4281/{YEAR}/F1.csv"
+        divis = csvl[13:15]
+    elif lg == 7:
+        csvl = F"mmz4281/{YEAR}/N1.csv"
+        divis = csvl[13:15]
+    elif lg == 8:
+        csvl = F"mmz4281/{YEAR}/B1.csv"
+        divis = csvl[13:15]
+    elif lg == 9:
+        csvl = F"mmz4281/{YEAR}/P1.csv"
+        divis = csvl[13:15]
+    elif lg == 10:
+        csvl = F"mmz4281/{YEAR}/G1.csv"
+        divis = csvl[13:15]
+    elif lg == 11:
+        csvl = F"mmz4281/{YEAR}/SC0.csv"
+        divis = csvl[13:16]
+    else:
+        sys.exit("No accepteble league selected..")
 
-epl_1718 = pd.read_csv("http://www.football-data.co.uk/mmz4281/2122/E0.csv")
-epl_1718['Date'] = pd.to_datetime(epl_1718['Date'])
-epl_1718['time_diff'] = (max(epl_1718['Date']) - epl_1718['Date']).dt.days
-epl_1718 = epl_1718[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
-epl_1718 = epl_1718.rename(columns={'FTHG': 'HomeGoals', 'FTAG': 'AwayGoals'})
+    return (csvl, divis)
 
+def download_league_data(url):
+    league_data = pd.read_csv(url)
+    league_data['Date'] = pd.to_datetime(league_data['Date'])
+    league_data['time_diff'] = (max(league_data['Date']) - league_data['Date']).dt.days
+    league_data = league_data[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
+    league_data = league_data.rename(columns={'FTHG': 'HomeGoals', 'FTAG': 'AwayGoals'})
 
+    return (league_data)
 
+def upcoming(uri):
+    next_match = pd.read_csv(uri, encoding='cp1252')
+    next_match = next_match[['Date','Time','Div','HomeTeam','AwayTeam']]
+    return next_match
 
 
 if __name__ == '__main__':
-    """
-    print("Pooling...")
-    get_total_score_xi(0.0)
+    YEAR = '2122'
 
-    """
+    print("----------------------------------------------")
+    print("|------------- League Selection -------------|")
+    print("|- 1: En PremierLeague | 2: En Championship -|")
+    print("|- 3: De Bundesliga ---| 4: It Serie A ------|")
+    print("|- 5: Sp LaLiga -------| 6: Fr Championnat --|")
+    print("|- 7: Nh Eredivisie ---| 8: Bg JupilerLeague |")
+    print("|- 9: Pr Liga I -------| 10: Gr SuperLeague -|")
+    print("|- 11: SC PremierLeague| 50: All Available --|")
+    print("----------------------------------------------")
+    # league = int(input("Select League: "))
+    league = 50
 
-    next_match = pd.read_csv('http://www.football-data.co.uk/fixtures.csv', encoding='cp1252')
-    next_match = next_match[['Div','HomeTeam','AwayTeam']]
+    if league == 50:
+        ran = range(1, 12)
+    else:
+        ran = range(league, league + 1)
 
-    for match in next_match.loc[next_match['Div']=='E0'].index:
-        ht = next_match['HomeTeam'][match]
-        at = next_match['AwayTeam'][match]
+    print('Downloading schedule..' , end='')
+    next_match = upcoming('http://www.football-data.co.uk/fixtures.csv')
+    print(' ====> Done')
 
-        params = solve_parameters_decay(epl_1718)
-        result = dixon_coles_simulate_match(params, ht, at)
-        res = resultdef(result)
+    results_df = pd.DataFrame()
 
-        print(ht, at, res)
+    for i in (ran):
+        csv1, divis = def_league(i)
+        print(f'Downloading league ({divis}) data..', end='')
+
+        prefix = "http://www.football-data.co.uk/"
+        path = prefix + csv1
+
+        league_data = download_league_data(path)
+        print(' ====> Done')
+
+        print(f'Calculating parameters decay for {divis}..', end='')
+        params = solve_parameters_decay(league_data)
+        print(' ====> Done')
+
+        print(f'Simulating matches for {divis}..')
+        for match in next_match.loc[next_match['Div']==divis].index:
+            ht = next_match['HomeTeam'][match]
+            at = next_match['AwayTeam'][match]
+            mdata = next_match['Date'][match]
+
+
+            result = dixon_coles_simulate_match(params, ht, at)
+            res = resultdef(result, ht, at, divis, mdata)
+            results_df = pd.concat([results_df, res])
+            print(ht, at, res)
+
+        print(f'\n----- League {divis} completed.. Going to next one -----\n')
