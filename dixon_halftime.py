@@ -1,14 +1,17 @@
 import pandas as pd
 import numpy as np
-import  warnings, sys, os, openpyxl
+import warnings, sys, os, openpyxl
 from scipy.stats import poisson
 from scipy.optimize import minimize
 
+
 warnings.filterwarnings('ignore')
+
 
 def calc_means(param_dict, homeTeam, awayTeam):
     return [np.exp(param_dict['attack_' + homeTeam] + param_dict['defence_' + awayTeam] + param_dict['home_adv']),
             np.exp(param_dict['defence_' + homeTeam] + param_dict['attack_' + awayTeam])]
+
 
 def rho_correction(x, y, lambda_x, mu_y, rho):
     if x == 0 and y == 0:
@@ -22,7 +25,8 @@ def rho_correction(x, y, lambda_x, mu_y, rho):
     else:
         return 1.0
 
-def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=10):
+
+def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=6):
     team_avgs = calc_means(params_dict, homeTeam, awayTeam)
     team_pred = [[poisson.pmf(i, team_avg) for i in range(0, max_goals + 1)] for team_avg in team_avgs]
     output_matrix = np.outer(np.array(team_pred[0]), np.array(team_pred[1]))
@@ -32,9 +36,9 @@ def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=10):
     output_matrix[:2, :2] = output_matrix[:2, :2] * correction_matrix
     return output_matrix
 
+
 def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
                            constraints=[{'type': 'eq', 'fun': lambda x: sum(x[:20]) - 20}], **kwargs):
-
     teams = np.sort(dataset['HomeTeam'].unique())
     # check for no weirdness in dataset
     away_teams = np.sort(dataset['AwayTeam'].unique())
@@ -75,14 +79,17 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
                         ['rho', 'home_adv'],
                         opt_output.x))
 
+
 def resultdef(result, ht, at, divis, mdata, mtime):
     under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
                result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
     under1_5 = result[0][0] + result[0][1] + result[1][0]
+    under0_5 = result[0][0]
     over3_5 = 1 - under3_5
     over2_5 = 1 - under2_5
     over1_5 = 1 - under1_5
+    over0_5 = 1 - under0_5
 
     home = np.sum(np.tril(result, -1))
     away = np.sum(np.triu(result, 1))
@@ -92,17 +99,16 @@ def resultdef(result, ht, at, divis, mdata, mtime):
     goalgoal = np.delete(temp, 0, 0)
     gg = np.sum(goalgoal)
 
-
     dict = {'O1_5': over1_5,
             'O2_5': over2_5,
             'O3_5': over3_5,
-            '1':home,
-            '2':away,
+            'O0_5': over0_5,
+            '1': home,
+            '2': away,
             'X': draw,
             'GG': gg,
             'U1_5': under1_5,
             'U2_5': under2_5,
-            'U3_5': under3_5,
             }
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %'])
@@ -110,7 +116,8 @@ def resultdef(result, ht, at, divis, mdata, mtime):
         if dict[res] > 0.7:
             outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2)]
 
-    return(outcome)
+    return (outcome)
+
 
 def def_league(lg):
     if lg == 1:
@@ -151,25 +158,28 @@ def def_league(lg):
 
     return (csvl, divis)
 
+
 def download_league_data(url):
     league_data = pd.read_csv(url)
     league_data['Date'] = pd.to_datetime(league_data['Date'])
     league_data['time_diff'] = (league_data['Date'].max() - league_data['Date']).dt.days
-    league_data = league_data[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
-    league_data = league_data.rename(columns={'FTHG': 'HomeGoals', 'FTAG': 'AwayGoals'})
+    league_data = league_data[['HomeTeam', 'AwayTeam', 'HTHG', 'HTAG', 'time_diff']]
+    league_data = league_data.rename(columns={'HTHG': 'HomeGoals', 'HTAG': 'AwayGoals'})
 
     return (league_data)
 
+
 def upcoming(uri):
     next_match = pd.read_csv(uri, encoding='cp1252')
-    next_match = next_match[['Date','Time','Div','HomeTeam','AwayTeam']]
+    next_match = next_match[['Date', 'Time', 'Div', 'HomeTeam', 'AwayTeam']]
     return next_match
+
 
 def save_results_excel(df, name):
     path_ex = f"{name}.xlsx"
 
-    temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
-    temp_temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+    temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+    temp_temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
 
     if df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all():
         print(' ====> Already Existist ..')
@@ -178,10 +188,11 @@ def save_results_excel(df, name):
         towrite = pd.concat([temp,df])
 
         writer = pd.ExcelWriter(path_ex, engine='openpyxl')
-        towrite.to_excel(writer, sheet_name='FullTime', index=False)
-        temp_temp.to_excel(writer, sheet_name='HalfTime', index=False)
+        towrite.to_excel(writer, sheet_name='HalfTime', index=False)
+        temp_temp.to_excel(writer, sheet_name='FullTime', index=False)
         writer.save()
         writer.close()
+
 
 if __name__ == '__main__':
     YEAR = '2122'
@@ -203,10 +214,10 @@ if __name__ == '__main__':
     else:
         ran = range(league, league + 1)
 
-    print('Downloading schedule..' , end='')
+    print('Downloading schedule..', end='')
     next_match = upcoming('http://www.football-data.co.uk/fixtures.csv')
-    max = next_match['Date'].max().replace('/','')
-    min = next_match['Date'].min().replace('/','')
+    max = next_match['Date'].max().replace('/', '')
+    min = next_match['Date'].min().replace('/', '')
     print(' ====> Done')
 
     results_df = pd.DataFrame()
@@ -226,12 +237,11 @@ if __name__ == '__main__':
         print(' ====> Done')
 
         print(f'Simulating matches for {divis}..')
-        for match in next_match.loc[next_match['Div']==divis].index:
+        for match in next_match.loc[next_match['Div'] == divis].index:
             ht = next_match['HomeTeam'][match]
             at = next_match['AwayTeam'][match]
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
-
 
             result = dixon_coles_simulate_match(params, ht, at)
             res = resultdef(result, ht, at, divis, mdate, mtime)
@@ -243,5 +253,4 @@ if __name__ == '__main__':
     print('Saving Results..', end='')
     name = fr'Dixon_Predictions_{YEAR}'
     save_results_excel(results_df, name)
-
     print(' ====> Done')
