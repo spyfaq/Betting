@@ -3,57 +3,6 @@ import sys
 import matplotlib.pyplot as plt
 
 
-def def_league(lg):
-    if lg == 1:
-        csvl = F"mmz4281/{YEAR}/E0.csv"
-        divis = csvl[13:15]
-    elif lg == 2:
-        csvl = F"mmz4281/{YEAR}/E1.csv"
-        divis = csvl[13:15]
-    elif lg == 3:
-        csvl = F"mmz4281/{YEAR}/D1.csv"
-        divis = csvl[13:15]
-    elif lg == 4:
-        csvl = F"mmz4281/{YEAR}/I1.csv"
-        divis = csvl[13:15]
-    elif lg == 5:
-        csvl = F"mmz4281/{YEAR}/SP1.csv"
-        divis = csvl[13:16]
-    elif lg == 6:
-        csvl = F"mmz4281/{YEAR}/F1.csv"
-        divis = csvl[13:15]
-    elif lg == 7:
-        csvl = F"mmz4281/{YEAR}/N1.csv"
-        divis = csvl[13:15]
-    elif lg == 8:
-        csvl = F"mmz4281/{YEAR}/B1.csv"
-        divis = csvl[13:15]
-    elif lg == 9:
-        csvl = F"mmz4281/{YEAR}/P1.csv"
-        divis = csvl[13:15]
-    elif lg == 10:
-        csvl = F"mmz4281/{YEAR}/G1.csv"
-        divis = csvl[13:15]
-    elif lg == 11:
-        csvl = F"mmz4281/{YEAR}/SC0.csv"
-        divis = csvl[13:16]
-    elif lg == 12:
-        csvl = F"mmz4281/{YEAR}/D2.csv"
-        divis = csvl[13:15]
-    elif lg == 13:
-        csvl = F"mmz4281/{YEAR}/I2.csv"
-        divis = csvl[13:15]
-    elif lg == 14:
-        csvl = F"mmz4281/{YEAR}/SP2.csv"
-        divis = csvl[13:16]
-    elif lg == 15:
-        csvl = F"mmz4281/{YEAR}/F2.csv"
-        divis = csvl[13:15]
-    else:
-        sys.exit("No accepteble league selected..")
-
-    return (csvl, divis)
-
 def download_league_data(url):
     league_data = pd.read_csv(url)
     league_data = league_data[['Div', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'HTHG', 'HTAG']]
