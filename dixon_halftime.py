@@ -119,46 +119,6 @@ def resultdef(result, ht, at, divis, mdata, mtime):
     return (outcome)
 
 
-def def_league(lg):
-    if lg == 1:
-        csvl = F"mmz4281/{YEAR}/E0.csv"
-        divis = csvl[13:15]
-    elif lg == 2:
-        csvl = F"mmz4281/{YEAR}/E1.csv"
-        divis = csvl[13:15]
-    elif lg == 3:
-        csvl = F"mmz4281/{YEAR}/D1.csv"
-        divis = csvl[13:15]
-    elif lg == 4:
-        csvl = F"mmz4281/{YEAR}/I1.csv"
-        divis = csvl[13:15]
-    elif lg == 5:
-        csvl = F"mmz4281/{YEAR}/SP1.csv"
-        divis = csvl[13:16]
-    elif lg == 6:
-        csvl = F"mmz4281/{YEAR}/F1.csv"
-        divis = csvl[13:15]
-    elif lg == 7:
-        csvl = F"mmz4281/{YEAR}/N1.csv"
-        divis = csvl[13:15]
-    elif lg == 8:
-        csvl = F"mmz4281/{YEAR}/B1.csv"
-        divis = csvl[13:15]
-    elif lg == 9:
-        csvl = F"mmz4281/{YEAR}/P1.csv"
-        divis = csvl[13:15]
-    elif lg == 10:
-        csvl = F"mmz4281/{YEAR}/G1.csv"
-        divis = csvl[13:15]
-    elif lg == 11:
-        csvl = F"mmz4281/{YEAR}/SC0.csv"
-        divis = csvl[13:16]
-    else:
-        sys.exit("No accepteble league selected..")
-
-    return (csvl, divis)
-
-
 def download_league_data(url):
     league_data = pd.read_csv(url)
     league_data['Date'] = pd.to_datetime(league_data['Date'])
@@ -181,13 +141,21 @@ def save_results_excel(df, name):
     temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
     temp_temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
 
-    if df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all():
+    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all()):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
         towrite = pd.concat([temp,df])
 
         writer = pd.ExcelWriter(path_ex, engine='openpyxl')
+
+        towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
+        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
+        towrite.sort_values(by='Date', inplace=True, ascending=True)
+        temp_temp.sort_values(by='Date', inplace=True, ascending=True)
+        towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
+        temp_temp['Date'] = temp_temp['Date'].dt.strftime('%d/%m/%Y')
+
         towrite.to_excel(writer, sheet_name='HalfTime', index=False)
         temp_temp.to_excel(writer, sheet_name='FullTime', index=False)
         writer.save()
@@ -196,39 +164,37 @@ def save_results_excel(df, name):
 
 if __name__ == '__main__':
     YEAR = '2122'
-
-    print("----------------------------------------------")
-    print("|------------- League Selection -------------|")
-    print("|- 1: En PremierLeague | 2: En Championship -|")
-    print("|- 3: De Bundesliga ---| 4: It Serie A ------|")
-    print("|- 5: Sp LaLiga -------| 6: Fr Championnat --|")
-    print("|- 7: Nh Eredivisie ---| 8: Bg JupilerLeague |")
-    print("|- 9: Pr Liga I -------| 10: Gr SuperLeague -|")
-    print("|- 11: SC PremierLeague| 50: All Available --|")
-    print("----------------------------------------------")
-    # league = int(input("Select League: "))
-    league = 50
-
-    if league == 50:
-        ran = range(1, 12)
-    else:
-        ran = range(league, league + 1)
+    name = fr'Dixon_Predictions_{YEAR}'
+    LEAGUES = {'En PremierLeague': 'E0',
+               'En Championship': 'E1',
+               'De Bundesliga': 'D1',
+               'It Serie A': 'I1',
+               'Sp LaLiga': 'SP1',
+               'Fr Championnat': 'F1',
+               'Nh Eredivisie': 'N1',
+               'Bg JupilerLeague': 'B1',
+               'Pr Liga I': 'P1',
+               'Gr SuperLeague': 'G1',
+               'SC PremierLeague': 'SC1',
+               'De Bundesliga 2': 'D2',
+               'It Serie B': 'I2',
+               'Sp Segunda': 'SP2',
+               'Fr Division 2': 'F2'
+               }
 
     print('Downloading schedule..', end='')
     next_match = upcoming('http://www.football-data.co.uk/fixtures.csv')
-    max = next_match['Date'].max().replace('/', '')
-    min = next_match['Date'].min().replace('/', '')
     print(' ====> Done')
 
     results_df = pd.DataFrame()
 
-    for i in (ran):
-        csv1, divis = def_league(i)
+    for key in LEAGUES:
+        divis = LEAGUES[key]
+
         print(f'Downloading league ({divis}) data..', end='')
-
         prefix = "http://www.football-data.co.uk/"
-        path = prefix + csv1
-
+        pre = F"mmz4281/{YEAR}/{divis}.csv"
+        path = prefix + pre
         league_data = download_league_data(path)
         print(' ====> Done')
 
@@ -251,6 +217,5 @@ if __name__ == '__main__':
         print(f'\n----- League {divis} completed.. Going to next one -----\n')
 
     print('Saving Results..', end='')
-    name = fr'Dixon_Predictions_{YEAR}'
     save_results_excel(results_df, name)
     print(' ====> Done')
