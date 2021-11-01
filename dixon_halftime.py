@@ -149,8 +149,8 @@ def save_results_excel(df, name):
 
         writer = pd.ExcelWriter(path_ex, engine='openpyxl')
 
-        towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
-        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
+        towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y')
+        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y')
         towrite.sort_values(by='Date', inplace=True, ascending=True)
         temp_temp.sort_values(by='Date', inplace=True, ascending=True)
         towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
