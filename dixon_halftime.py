@@ -149,8 +149,8 @@ def save_results_excel(df, name):
 
         writer = pd.ExcelWriter(path_ex, engine='openpyxl')
 
-        towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
-        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y').strftime('%d/%m/%Y')
+        towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y')
+        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y')
         towrite.sort_values(by='Date', inplace=True, ascending=True)
         temp_temp.sort_values(by='Date', inplace=True, ascending=True)
         towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
@@ -179,7 +179,8 @@ if __name__ == '__main__':
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',
-               'Fr Division 2': 'F2'
+               'Fr Division 2': 'F2',
+               'En League 1': 'E2',
                }
 
     print('Downloading schedule..', end='')
@@ -190,6 +191,10 @@ if __name__ == '__main__':
 
     for key in LEAGUES:
         divis = LEAGUES[key]
+
+        if (divis in next_match['Div'].unique()) == False:
+            print(f'\n----- No match to simulate for league {divis}.. Going to next one -----\n')
+            continue
 
         print(f'Downloading league ({divis}) data..', end='')
         prefix = "http://www.football-data.co.uk/"
