@@ -170,7 +170,8 @@ if __name__ == '__main__':
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',
-               'Fr Division 2': 'F2'
+               'Fr Division 2': 'F2',
+               'En League 1': 'E2',
                }
 
     print('Downloading schedule..' , end='')
@@ -180,6 +181,10 @@ if __name__ == '__main__':
     results_df = pd.DataFrame()
     for key in LEAGUES:
         divis = LEAGUES[key]
+
+        if (divis in next_match['Div'].unique()) == False:
+            print(f'\n----- No match to simulate for league {divis}.. Going to next one -----\n')
+            continue
 
         print(f'Downloading league ({divis}) data..', end='')
         prefix = "http://www.football-data.co.uk/"

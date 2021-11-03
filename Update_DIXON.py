@@ -129,7 +129,8 @@ if __name__ == '__main__':
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',
-               'Fr Division 2': 'F2'
+               'Fr Division 2': 'F2',
+               'En League 1': 'E2',
                }
 
     results_df_half = pd.DataFrame()
