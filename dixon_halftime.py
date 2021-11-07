@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import warnings, sys, os, openpyxl
+import warnings, sys, os, openpyxl, time
 from scipy.stats import poisson
 from scipy.optimize import minimize
 
@@ -26,7 +26,7 @@ def rho_correction(x, y, lambda_x, mu_y, rho):
         return 1.0
 
 
-def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=6):
+def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=5):
     team_avgs = calc_means(params_dict, homeTeam, awayTeam)
     team_pred = [[poisson.pmf(i, team_avg) for i in range(0, max_goals + 1)] for team_avg in team_avgs]
     output_matrix = np.outer(np.array(team_pred[0]), np.array(team_pred[1]))
@@ -107,8 +107,7 @@ def resultdef(result, ht, at, divis, mdata, mtime):
             '2': away,
             'X': draw,
             'GG': gg,
-            'U1_5': under1_5,
-            'U2_5': under2_5,
+            'U0_5': under0_5
             }
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %'])
@@ -138,8 +137,16 @@ def upcoming(uri):
 def save_results_excel(df, name):
     path_ex = f"{name}.xlsx"
 
-    temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
-    temp_temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
+
+    while True:
+        try:
+            temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+            temp_temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
+            break
+        except PermissionError:
+            print('File is open.. waiting one minute before trying again.')
+            time.sleep(60)
+
 
     if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all()):
         print(' ====> Already Existist ..')
@@ -156,10 +163,15 @@ def save_results_excel(df, name):
         towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
         temp_temp['Date'] = temp_temp['Date'].dt.strftime('%d/%m/%Y')
 
-        towrite.to_excel(writer, sheet_name='HalfTime', index=False)
-        temp_temp.to_excel(writer, sheet_name='FullTime', index=False)
-        writer.save()
-        writer.close()
+        while True:
+            try:
+                towrite.to_excel(writer, sheet_name='HalfTime', index=False)
+                temp_temp.to_excel(writer, sheet_name='FullTime', index=False)
+                writer.save()
+                writer.close()
+            except PermissionError:
+                print('File is open.. waiting one minute before trying again.')
+                time.sleep(60)
 
 
 if __name__ == '__main__':
@@ -217,7 +229,7 @@ if __name__ == '__main__':
             result = dixon_coles_simulate_match(params, ht, at)
             res = resultdef(result, ht, at, divis, mdate, mtime)
             results_df = pd.concat([results_df, res])
-            print(ht, at, res)
+            print(res)
 
         print(f'\n----- League {divis} completed.. Going to next one -----\n')
 
