@@ -84,12 +84,9 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
 
 
 def resultdef(result, ht, at, divis, mdata, mtime, stakes):
-    under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
-               result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
     under1_5 = result[0][0] + result[0][1] + result[1][0]
     under0_5 = result[0][0]
-    over3_5 = 1 - under3_5
     over2_5 = 1 - under2_5
     over1_5 = 1 - under1_5
     over0_5 = 1 - under0_5
@@ -104,13 +101,12 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
 
     dict = {'O1_5': over1_5,
             'O2_5': over2_5,
-            'O3_5': over3_5,
             'O0_5': over0_5,
+            'U0_5': under0_5,
             '1': home,
             '2': away,
             'X': draw,
             'GG': gg,
-            'U0_5': under0_5
             }
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
@@ -304,6 +300,7 @@ def historyfunc(path, hw, aw):
     ov2_5 = 0
     ov_5 = 0
     ov1_5 = 0
+    gg = 0
 
     for year in range(1, 5):
 
@@ -337,6 +334,9 @@ def historyfunc(path, hw, aw):
             ht_found.loc[ht_found["AwayTeam"] == aw]['HTAG'].iloc[0]) > 1:
                 ov_5 = ov_5 + 1
 
+            if ((ht_found.loc[ht_found["AwayTeam"] == aw]['HTHG'].iloc[0]) >1) and (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['HTAG'].iloc[0]) > 1:
+                gg = gg + 1
 
         except:
             print(hw, "-", aw, "not played during", bf)
@@ -349,6 +349,7 @@ def historyfunc(path, hw, aw):
         perc_o05 = ov_5 / totalm
         perc_o15 = ov1_5 / totalm
         perc_o25 = ov2_5 / totalm
+        perc_gg = gg/totalm
     else:
         perc_h = 0
         perc_d = 0
@@ -356,6 +357,7 @@ def historyfunc(path, hw, aw):
         perc_o05 = 0
         perc_o15 = 0
         perc_o25 = 0
+        perc_gg = 0
 
     dict = {'O1_5': perc_o15,
             'O2_5': perc_o25,
@@ -363,7 +365,8 @@ def historyfunc(path, hw, aw):
             '1': perc_h,
             '2': perc_a,
             'X': perc_d,
-            'U0_5': 1 - perc_o05
+            'U0_5': 1 - perc_o05,
+            'GG': perc_gg
             }
 
     return (dict)
