@@ -180,7 +180,7 @@ def openpage(page):
     global driver
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
-    #driver.minimize_window()
+    driver.minimize_window()
     return()
 
 def banners():
