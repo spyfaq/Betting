@@ -79,7 +79,7 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
                         ['rho', 'home_adv'],
                         opt_output.x))
 
-def resultdef(result, ht, at, divis, mdata, mtime):
+def resultdef(result, ht, at, divis, mdata, mtime, stakes):
     under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
                result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
@@ -96,7 +96,6 @@ def resultdef(result, ht, at, divis, mdata, mtime):
     goalgoal = np.delete(temp, 0, 0)
     gg = np.sum(goalgoal)
 
-
     dict = {'O1_5': over1_5,
             'O2_5': over2_5,
             'O3_5': over3_5,
@@ -109,10 +108,15 @@ def resultdef(result, ht, at, divis, mdata, mtime):
             'U3_5': under3_5,
             }
 
-    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %'])
+    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
     for res in dict.keys():
         if dict[res] > 0.7:
-            outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2)]
+            hist_dict = historyfunc(path, ht, at)
+            Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)
+            try:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, stakes[res]]
+            except:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, '-']
 
     return(outcome)
 
@@ -133,11 +137,17 @@ def upcoming(uri):
 def save_results_excel(df, name):
     path_ex = f"{name}.xlsx"
 
-    temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
-    temp_temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+    while True:
+        try:
+            temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
+            temp_temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+            break
+        except PermissionError:
+            print('File is open.. waiting one minute before trying again.')
+            sleep(60)
 
-    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all()):
-        print(' ====> Already Existist ..')
+    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction']]).all().all()):
+        print(' ====> Already Exists ..')
         sys.exit('same dataframe..')
     else:
         towrite = pd.concat([temp,df])
@@ -151,10 +161,236 @@ def save_results_excel(df, name):
         towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
         temp_temp['Date'] = temp_temp['Date'].dt.strftime('%d/%m/%Y')
 
-        towrite.to_excel(writer, sheet_name='FullTime', index=False)
-        temp_temp.to_excel(writer, sheet_name='HalfTime', index=False)
-        writer.save()
-        writer.close()
+        while True:
+            try:
+                towrite.to_excel(writer, sheet_name='FullTime', index=False)
+                temp_temp.to_excel(writer, sheet_name='HalfTime', index=False)
+                writer.save()
+                writer.close()
+                break
+            except PermissionError:
+                print('File is open.. waiting one minute before trying again.')
+                sleep(60)
+
+def openpage(page):
+    """
+    :param page: the link to open
+    :return: the opened page driver
+    """
+    global driver
+    driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
+    driver.get(page)
+    driver.minimize_window()
+    return()
+
+def banners():
+    sleep(3)
+    try:
+        driver.find_element_by_xpath(
+            '//*[@id="landing-page-modal"]/div/div[1]/button').click()
+    except:
+        print('(No Banner)')
+
+def login():
+    # banner
+    i = 0
+    while True:
+        try:
+            driver.find_element_by_xpath(
+                '//*[@id="landing-page-modal"]/div/div[2]/div[1]/p[2]/a').click()
+            break
+        except:
+            i+=1
+            if i >= 3:
+                sys.exit('took to long to load')
+            else:
+                sleep(5)
+
+    #username field
+    fr = driver.find_element_by_xpath('//*[@id="iframe-modal"]/div/iframe')
+    driver.switch_to.frame(fr)
+    driver.find_element_by_xpath('//*[@id="js-login-form"]/div[1]/div[1]/input').send_keys('spyrospnd')
+    driver.find_element_by_xpath('//*[@id="js-login-form"]/div[2]/div[1]/input').send_keys('Sp12^Pa16')
+    sleep(1)
+    driver.find_element_by_xpath('//*[@id="js-login-button"]').click()
+    return ()
+
+def find_match(home, away):
+    sleep(1)
+    temp = driver.find_element_by_xpath('//div[@class="sb-header__header__actions__search-icon GTM-search"]')
+    ActionChains(driver).move_to_element(temp).click().perform()
+
+    search = home + ' - ' + away
+    sleep(2)
+    driver.find_element_by_xpath('//*[@id="search-modal"]/div/div[1]/input').send_keys(search)
+    sleep(2)
+    driver.find_element_by_xpath('//*[@id="search-modal"]/div/div[2]/div[1]/div[2]/div[1]/div[2]/div').click()
+    return()
+
+def find_fulltime_stake():
+    sleep(2)
+    try:
+        driver.find_element_by_xpath('/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[6]/div[1]/div[2]/div[1]/div/button')
+        div = 0
+    except:
+        div = 1
+
+    stake = dict()
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[2]/'
+    for i in [1, 2, 3]:
+        path = prefix + f'div[{i}]/div/button'
+
+        try:
+            temp = driver.find_element_by_xpath(path)
+        except:
+            return ('Match has start')
+
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2]
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+
+    temp = driver.find_element_by_xpath(f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4+div}]/div[1]/div/ul/li[2]/div/div')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[2]/'
+    for i in [1,2]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2][0] + words[3].replace('.','_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[2]/div[2]/'
+    for i in [1,2,3,4,5,6]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2][0] + words[3].replace('.','_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+    temp = driver.find_element_by_xpath(
+        f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4 + div}]/div[1]/div/ul/li[3]/div/div')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
+
+    path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[2]/button[1]'
+    temp = driver.find_element_by_xpath(path)
+    temp = temp.get_attribute('aria-label')
+
+    words = temp.split(' ')
+    temp_r = 'GG'
+    temp_s = words[-1][:-1]
+
+    stake[temp_r] = temp_s
+
+    return(stake)
+
+def historyfunc(path, hw, aw):
+    """
+    :return: history percentage of home win, away win, over, under
+    """
+    history = list()
+    win = 0
+    lose = 0
+    draw = 0
+    ov = 0
+    und = 0
+    ov3_5 = 0
+    ov1_5 = 0
+    gg = 0
+
+    for year in range(1, 5):
+
+        now = str(int(YEAR[0:2]) - year)
+        nows = str(int(YEAR[2:4]) - year)
+        bf = now + nows
+        ncsv = path.replace(f"{YEAR}", bf)
+        old_data = pd.read_csv(ncsv, encoding='latin1')
+        old_data = old_data[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']]
+        old_data.head()
+        old_data.mean()
+        ht_found = old_data.loc[(old_data["HomeTeam"] == hw)]
+        try:
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) > (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]):
+                win = win + 1
+            elif (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) < (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]):
+                lose = lose + 1
+            elif (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) == (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]):
+                draw = draw + 1
+
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) + (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 2:
+                ov = ov + 1
+            else:
+                und = und + 1
+
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) + (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 2:
+                ov1_5 = ov1_5 + 1
+
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) > 0 and (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 0:
+                gg = gg + 1
+
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) + (
+            ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 3:
+                ov3_5 = ov3_5 + 1
+
+        except:
+            print(hw, "-", aw, "not played during", bf)
+
+    if win + draw + lose > 0:
+        totalm = win + draw + lose
+        perc_h = win / totalm
+        perc_d = draw / totalm
+        perc_a = lose / totalm
+        perc_o = ov / totalm
+        perc_o3 = ov3_5 / totalm
+        perc_o1 = ov1_5 / totalm
+        perc_gg = gg / totalm
+
+    else:
+        totalm = 0
+        perc_h = 0
+        perc_d = 0
+        perc_a = 0
+        perc_o = 0
+        perc_o3 = 0
+        perc_o1 = 0
+        perc_gg = 0
+
+    dict = {'O1_5': perc_o1,
+            'O2_5': perc_o,
+            'O3_5': perc_o3,
+            '1': perc_h,
+            '2': perc_a,
+            'X': perc_d,
+            'GG': perc_gg,
+            'U1_5': 1 - perc_o1,
+            'U2_5': 1 - perc_o,
+            'U3_5': 1 - perc_o3,
+            }
+
+    return (dict)
 
 if __name__ == '__main__':
     YEAR = '2122'
@@ -207,14 +443,23 @@ if __name__ == '__main__':
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
 
+            openpage("https://en.stoiximan.gr/")
+            try:
+                banners()
+                find_match(ht, at)
+                fulltime_stakes = find_fulltime_stake()
+            except:
+                fulltime_stakes = '-'
+
+            driver.close()
+            sleep(2)
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime)
+            res = resultdef(result, ht, at, divis, mdate, mtime, fulltime_stakes)
             results_df = pd.concat([results_df, res])
             print(res)
 
         print(f'\n----- League {divis} completed.. Going to next one -----\n')
-
     print('Saving Results..', end='')
     save_results_excel(results_df, name)
     print(' ====> Done')
