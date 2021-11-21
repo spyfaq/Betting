@@ -4,6 +4,9 @@ import warnings, sys, os, openpyxl
 from scipy.stats import poisson
 from scipy.optimize import minimize
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
+from time import sleep
 
 warnings.filterwarnings('ignore')
 
@@ -80,7 +83,7 @@ def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, optio
                         opt_output.x))
 
 
-def resultdef(result, ht, at, divis, mdata, mtime):
+def resultdef(result, ht, at, divis, mdata, mtime, stakes):
     under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
                result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
@@ -100,8 +103,8 @@ def resultdef(result, ht, at, divis, mdata, mtime):
     dict = {'O1_5': over1_5,
             'O2_5': over2_5,
             'O3_5': over3_5,
-            '1': home,
-            '2': away,
+            '1':home,
+            '2':away,
             'X': draw,
             'GG': gg,
             'U1_5': under1_5,
@@ -109,12 +112,15 @@ def resultdef(result, ht, at, divis, mdata, mtime):
             'U3_5': under3_5,
             }
 
-    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %'])
+    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %', 'Odds'])
     for res in dict.keys():
         if dict[res] > 0.7:
-            outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2)]
+            try:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), stakes[res]]
+            except:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), '-']
 
-    return (outcome)
+    return(outcome)
 
 
 def download_league_data(divis):
@@ -131,17 +137,18 @@ def download_league_data(divis):
         season = '20' + YEAR[0:2] + '/20' + YEAR[2:4]
         league_data = league_data.loc[league_data['Season'] == season]
 
-    if divis in ['SWE', 'FIN', 'NOR', ]:
-        league_data = league_data.loc[league_data['Season'] == YEAR]
+    if divis in ['SWE', 'FIN', 'NOR']:
+        season = '20' + YEAR[0:2]
+        league_data = league_data.loc[league_data['Season'] == int(season)]
 
     league_data['Date'] = pd.to_datetime(league_data['Date'])
     league_data['time_diff'] = (league_data['Date'].max() - league_data['Date']).dt.days
     try:
         league_data = league_data[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
     except KeyError:
-        league_data.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG'})
+        league_data.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'HG': 'FTHG', 'AG': 'FTAG', 'Res':'FTR', 'Country':'Div'}, inplace=True)
 
-    league_data = league_data[['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
+    league_data = league_data[['Div', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR', 'time_diff']]
     league_data = league_data.rename(columns={'FTHG': 'HomeGoals', 'FTAG': 'AwayGoals'})
 
     return (league_data)
@@ -153,8 +160,10 @@ def upcoming(uri):
     try:
         next_match = next_match[['Date', 'Time', 'Div', 'HomeTeam', 'AwayTeam']]
     except KeyError:
-        next_match = next_match[['Date', 'Time', 'Div', 'Home', 'Away']]
-        next_match.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam'}, inplace=True)
+        next_match = next_match[['Date', 'Time', 'Country', 'Home', 'Away']].dropna()
+        next_match.rename(columns={'Home': 'HomeTeam', 'Away': 'AwayTeam', 'Country':'Div'}, inplace=True)
+        next_match = next_match.loc[next_match['Div'].isin(['Austria','Denmark','Finland','Norway','Sweden','Switzerland'])]
+        next_match['Div'] = next_match['Div'].apply(lambda x: LEAGUES[x])
 
     return next_match
 
@@ -163,65 +172,173 @@ def save_results_excel(df, name):
     path_ex = f"{name}.xlsx"
 
     temp = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
-    temp_temp = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+
 
     if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all()):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
         towrite = pd.concat([temp, df])
-
         writer = pd.ExcelWriter(path_ex, engine='openpyxl')
-
         towrite['Date'] = pd.to_datetime(towrite['Date'], format='%d/%m/%Y')
-        temp_temp['Date'] = pd.to_datetime(temp_temp['Date'], format='%d/%m/%Y')
         towrite.sort_values(by='Date', inplace=True, ascending=True)
-        temp_temp.sort_values(by='Date', inplace=True, ascending=True)
         towrite['Date'] = towrite['Date'].dt.strftime('%d/%m/%Y')
-        temp_temp['Date'] = temp_temp['Date'].dt.strftime('%d/%m/%Y')
-
         towrite.to_excel(writer, sheet_name='FullTime', index=False)
-        temp_temp.to_excel(writer, sheet_name='HalfTime', index=False)
+
         writer.save()
         writer.close()
+
+def openpage(page):
+    """
+    :param page: the link to open
+    :return: the opened page driver
+    """
+    global driver
+    driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
+    driver.get(page)
+    driver.minimize_window()
+    return()
+
+def banners():
+    sleep(3)
+    try:
+        driver.find_element_by_xpath(
+            '//*[@id="landing-page-modal"]/div/div[1]/button').click()
+    except:
+        print('(No Banner)')
+
+def login():
+    # banner
+    i = 0
+    while True:
+        try:
+            driver.find_element_by_xpath(
+                '//*[@id="landing-page-modal"]/div/div[2]/div[1]/p[2]/a').click()
+            break
+        except:
+            i+=1
+            if i >= 3:
+                sys.exit('took to long to load')
+            else:
+                sleep(5)
+
+    #username field
+    fr = driver.find_element_by_xpath('//*[@id="iframe-modal"]/div/iframe')
+    driver.switch_to.frame(fr)
+    driver.find_element_by_xpath('//*[@id="js-login-form"]/div[1]/div[1]/input').send_keys('spyrospnd')
+    driver.find_element_by_xpath('//*[@id="js-login-form"]/div[2]/div[1]/input').send_keys('Sp12^Pa16')
+    sleep(1)
+    driver.find_element_by_xpath('//*[@id="js-login-button"]').click()
+    return ()
+
+def find_match(home, away):
+    sleep(1)
+    temp = driver.find_element_by_xpath('//div[@class="sb-header__header__actions__search-icon GTM-search"]')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    search = home +' - '+ away
+    sleep(2)
+    driver.find_element_by_xpath('//*[@id="search-modal"]/div/div[1]/input').send_keys(search)
+    sleep(2)
+    driver.find_element_by_xpath('//*[@id="search-modal"]/div/div[2]/div[1]/div[2]/div[1]/div[2]/div').click()
+    return()
+
+def find_fulltime_stake():
+    sleep(2)
+    try:
+        driver.find_element_by_xpath('/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[6]/div[1]/div[2]/div[1]/div/button')
+        div = 0
+    except:
+        div = 1
+
+    stake = dict()
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[2]/'
+    for i in [1, 2, 3]:
+        path = prefix + f'div[{i}]/div/button'
+
+        try:
+            temp = driver.find_element_by_xpath(path)
+        except:
+            return ('Match has start')
+
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2]
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+
+    temp = driver.find_element_by_xpath(f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4+div}]/div[1]/div/ul/li[2]/div/div')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[2]/'
+    for i in [1,2]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2][0] + words[3].replace('.','_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[2]/div[2]/'
+    for i in [1,2,3,4,5,6]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = words[2][0] + words[3].replace('.','_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+    temp = driver.find_element_by_xpath(
+        f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4 + div}]/div[1]/div/ul/li[3]/div/div')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
+
+    path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[2]/button[1]'
+    temp = driver.find_element_by_xpath(path)
+    temp = temp.get_attribute('aria-label')
+
+    words = temp.split(' ')
+    temp_r = 'GG'
+    temp_s = words[-1][:-1]
+
+    stake[temp_r] = temp_s
+
+    return(stake)
 
 
 if __name__ == '__main__':
     YEAR = '2122'
-    name = fr'Dixon_Predictions_{YEAR}'
-    LEAGUES = {'En PremierLeague': 'E0',
-               'En Championship': 'E1',
-               'De Bundesliga': 'D1',
-               'It Serie A': 'I1',
-               'Sp LaLiga': 'SP1',
-               'Fr Championnat': 'F1',
-               'Nh Eredivisie': 'N1',
-               'Bg JupilerLeague': 'B1',
-               'Pr Liga I': 'P1',
-               'Gr SuperLeague': 'G1',
-               'SC PremierLeague': 'SC1',
-               'De Bundesliga 2': 'D2',
-               'It Serie B': 'I2',
-               'Sp Segunda': 'SP2',
-               'Fr Division 2': 'F2',
-               'En League 1': 'E2',
+    name = fr'Dixon_Predictions_extra_{YEAR}'
+    LEAGUES = {
+               'Sweden': 'SWE',
+               'Austria': 'AUT',
+               'Denmark': 'DNK',
+               'Norway': 'NOR',
+               'Switzerland': 'SWZ',
+                'Finland': 'FIN',
                }
 
-    print('Downloading schedule..', end='')
-    next_match = upcoming('http://www.football-data.co.uk/fixtures.csv')
-    print(' ====> Done')
 
     print('Downloading extra schedule..', end='')
-    extra_next_match = upcoming('http://www.football-data.co.uk/matches_new_leagues.csv')
+    next_match = upcoming('https://www.football-data.co.uk/new_league_fixtures.csv')
     print(' ====> Done')
-
-    next_match = pd.concat([next_match, extra_next_match], axis=1)
 
     results_df = pd.DataFrame()
     for key in LEAGUES:
         divis = LEAGUES[key]
 
-        if (divis in next_match['Div'].unique()) == False:
+        if ((divis in next_match['Div'].unique()) == False):
             print(f'\n----- No match to simulate for league {divis}.. Going to next one -----\n')
             continue
 
@@ -240,8 +357,19 @@ if __name__ == '__main__':
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
 
+            openpage("https://en.stoiximan.gr/")
+            try:
+                banners()
+                find_match(ht, at)
+                fulltime_stakes = find_fulltime_stake()
+            except:
+                fulltime_stakes = '-'
+
+            driver.close()
+            sleep(2)
+
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime)
+            res = resultdef(result, ht, at, divis, mdate, mtime , fulltime_stakes)
             results_df = pd.concat([results_df, res])
             print(res)
 
