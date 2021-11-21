@@ -150,7 +150,7 @@ def save_results_excel(df, name):
             print('File is open.. waiting one minute before trying again.')
             sleep(60)
 
-    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %']]).all().all()):
+    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %']]).all().all()):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
