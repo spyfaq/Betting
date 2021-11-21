@@ -1,6 +1,9 @@
 pandas
 numpy
-warnings, sys, os, openpyxl
+warnings
+sys
+os
+openpyxl
 scipy.stats
 scipy.optimize
 selenium
