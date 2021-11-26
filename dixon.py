@@ -7,7 +7,7 @@ from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
-
+from multiprocessing import Pool
 warnings.filterwarnings('ignore')
 
 def calc_means(param_dict, homeTeam, awayTeam):
@@ -36,7 +36,7 @@ def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=7):
     output_matrix[:2, :2] = output_matrix[:2, :2] * correction_matrix
     return output_matrix
 
-def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
+def solve_parameters_decay(dataset, xi=0, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
                            constraints=[{'type': 'eq', 'fun': lambda x: sum(x[:20]) - 20}], **kwargs):
 
     teams = np.sort(dataset['HomeTeam'].unique())
@@ -102,21 +102,24 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
             '1':home,
             '2':away,
             'X': draw,
-            'GG': gg,
-            'U1_5': under1_5,
-            'U2_5': under2_5,
-            'U3_5': under3_5,
+            'GG': gg
             }
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
     for res in dict.keys():
         if dict[res] > 0.7:
             hist_dict = historyfunc(path, ht, at)
-            Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)
             try:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, stakes[res]]
+                Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)
+                hist_perc = round(hist_dict[res], 2)
             except:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, '-']
+                Weighted = '-'
+                hist_perc = '-'
+
+            try:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, stakes[res]]
+            except:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, '-']
 
     return(outcome)
 
@@ -369,14 +372,13 @@ def historyfunc(path, hw, aw):
         perc_gg = gg / totalm
 
     else:
-        totalm = 0
-        perc_h = 0
-        perc_d = 0
-        perc_a = 0
-        perc_o = 0
-        perc_o3 = 0
-        perc_o1 = 0
-        perc_gg = 0
+        perc_h = '-'
+        perc_d = '-'
+        perc_a = '-'
+        perc_o = '-'
+        perc_o3 = '-'
+        perc_o1 = '-'
+        perc_gg = '-'
 
     dict = {'O1_5': perc_o1,
             'O2_5': perc_o,
@@ -385,9 +387,6 @@ def historyfunc(path, hw, aw):
             '2': perc_a,
             'X': perc_d,
             'GG': perc_gg,
-            'U1_5': 1 - perc_o1,
-            'U2_5': 1 - perc_o,
-            'U3_5': 1 - perc_o3,
             }
 
     return (dict)
@@ -425,6 +424,8 @@ if __name__ == '__main__':
             print(f'\n----- No match to simulate for league {divis}.. Going to next one -----\n')
             continue
 
+        perc = (1- (len(LEAGUES) -list(LEAGUES).index(key)/len(LEAGUES)))
+        print(f'Progress.. {round(perc, 0)}% ')
         print(f'Downloading league ({divis}) data..', end='')
         prefix = "http://www.football-data.co.uk/"
         pre = F"mmz4281/{YEAR}/{divis}.csv"
@@ -443,6 +444,7 @@ if __name__ == '__main__':
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
 
+            """
             openpage("https://en.stoiximan.gr/")
             try:
                 banners()
@@ -453,9 +455,10 @@ if __name__ == '__main__':
 
             driver.close()
             sleep(2)
+            """
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime, fulltime_stakes)
+            res = resultdef(result, ht, at, divis, mdate, mtime, '-')
             results_df = pd.concat([results_df, res])
             print(res)
 

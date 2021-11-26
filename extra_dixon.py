@@ -40,7 +40,7 @@ def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=10):
     return output_matrix
 
 
-def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
+def solve_parameters_decay(dataset, xi=0, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
                            constraints=[{'type': 'eq', 'fun': lambda x: sum(x[:20]) - 20}], **kwargs):
     teams = np.sort(dataset['HomeTeam'].unique())
     # check for no weirdness in dataset
@@ -106,10 +106,7 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
             '1':home,
             '2':away,
             'X': draw,
-            'GG': gg,
-            'U1_5': under1_5,
-            'U2_5': under2_5,
-            'U3_5': under3_5,
+            'GG': gg
             }
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Pred %', 'Odds'])

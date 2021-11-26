@@ -40,7 +40,7 @@ def dixon_coles_simulate_match(params_dict, homeTeam, awayTeam, max_goals=5):
     return output_matrix
 
 
-def solve_parameters_decay(dataset, xi=0.001, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
+def solve_parameters_decay(dataset, xi=0, debug=False, init_vals=None, options={'disp': True, 'maxiter': 100},
                            constraints=[{'type': 'eq', 'fun': lambda x: sum(x[:20]) - 20}], **kwargs):
     teams = np.sort(dataset['HomeTeam'].unique())
     # check for no weirdness in dataset
@@ -102,7 +102,6 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
     dict = {'O1_5': over1_5,
             'O2_5': over2_5,
             'O0_5': over0_5,
-            'U0_5': under0_5,
             '1': home,
             '2': away,
             'X': draw,
@@ -113,11 +112,17 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
     for res in dict.keys():
         if dict[res] > 0.7:
             hist_dict = historyfunc(path, ht, at)
-            Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)
             try:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, stakes[res]]
+                hist_perc = round(hist_dict[res], 2)
+                Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)
             except:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), round(hist_dict[res], 2), Weighted, '-']
+                Weighted = '-'
+                hist_perc = '-'
+
+            try:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc,  Weighted, stakes[res]]
+            except:
+                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, '-']
 
     return (outcome)
 
@@ -349,23 +354,22 @@ def historyfunc(path, hw, aw):
         perc_o05 = ov_5 / totalm
         perc_o15 = ov1_5 / totalm
         perc_o25 = ov2_5 / totalm
-        perc_gg = gg/totalm
+        perc_gg = gg / totalm
     else:
-        perc_h = 0
-        perc_d = 0
-        perc_a = 0
-        perc_o05 = 0
-        perc_o15 = 0
-        perc_o25 = 0
-        perc_gg = 0
-
+        perc_h = '-'
+        perc_d = '-'
+        perc_a = '-'
+        perc_o05 = '-'
+        perc_o15 = '-'
+        perc_o25 = '-'
+        perc_gg = '-'
+    
     dict = {'O1_5': perc_o15,
             'O2_5': perc_o25,
             'O0_5': perc_o05,
             '1': perc_h,
             '2': perc_a,
             'X': perc_d,
-            'U0_5': 1 - perc_o05,
             'GG': perc_gg
             }
 
@@ -423,6 +427,7 @@ if __name__ == '__main__':
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
 
+            """
             openpage("https://en.stoiximan.gr/")
             try:
                 banners()
@@ -433,9 +438,10 @@ if __name__ == '__main__':
 
             driver.close()
             sleep(2)
+            """
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime, halftime_stakes)
+            res = resultdef(result, ht, at, divis, mdate, mtime, '-')
             results_df = pd.concat([results_df, res])
             print(res)
 
