@@ -427,7 +427,7 @@ if __name__ == '__main__':
             mdate = next_match['Date'][match]
             mtime = next_match['Time'][match]
 
-            """
+
             openpage("https://en.stoiximan.gr/")
             try:
                 banners()
@@ -438,7 +438,7 @@ if __name__ == '__main__':
 
             driver.close()
             sleep(2)
-            """
+
 
             result = dixon_coles_simulate_match(params, ht, at)
             res = resultdef(result, ht, at, divis, mdate, mtime, '-')
