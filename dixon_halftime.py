@@ -441,7 +441,7 @@ if __name__ == '__main__':
 
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime, '-')
+            res = resultdef(result, ht, at, divis, mdate, mtime, halftime_stakes)
             results_df = pd.concat([results_df, res])
             print(res)
 

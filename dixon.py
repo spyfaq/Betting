@@ -183,7 +183,7 @@ def openpage(page):
     global driver
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
-    driver.minimize_window()
+    #driver.minimize_window()
     return()
 
 def banners():
@@ -458,7 +458,7 @@ if __name__ == '__main__':
 
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime, '-')
+            res = resultdef(result, ht, at, divis, mdate, mtime, fulltime_stakes)
             results_df = pd.concat([results_df, res])
             print(res)
 
