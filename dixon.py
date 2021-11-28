@@ -107,7 +107,7 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
     for res in dict.keys():
-        if dict[res] > 0.7:
+        if dict[res] > 0.66:
             hist_dict = historyfunc(path, ht, at)
             try:
                 Weighted = (dict[res] * 0.85 + hist_dict[res] * 0.15).round(2)

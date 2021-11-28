@@ -100,6 +100,7 @@ def update_excel(half, full):
     plot_show(full_plot, 'FullTime')
 
 def plot_show(data, kind):
+    data.drop(data.columns[0], axis=1, inplace=True)
     res = data.div(data.sum(axis=1), axis=0) * 100
 
     ax = res.plot(title=kind, kind="bar", legend=True, stacked=True, width=0.5, grid=True,

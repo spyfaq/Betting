@@ -110,7 +110,7 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
     for res in dict.keys():
-        if dict[res] > 0.7:
+        if dict[res] > 0.66:
             hist_dict = historyfunc(path, ht, at)
             try:
                 hist_perc = round(hist_dict[res], 2)
@@ -189,7 +189,7 @@ def openpage(page):
     global driver
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
-    driver.minimize_window()
+    #driver.minimize_window()
     return()
 
 def banners():
