@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
-import  warnings, sys, os, openpyxl
+import  warnings, sys, os
 from scipy.stats import poisson
 from scipy.optimize import minimize
-from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from time import sleep
-from multiprocessing import Pool
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
 warnings.filterwarnings('ignore')
 
 def calc_means(param_dict, homeTeam, awayTeam):
@@ -174,6 +175,30 @@ def save_results_excel(df, name):
             except PermissionError:
                 print('File is open.. waiting one minute before trying again.')
                 sleep(60)
+
+def save_results_online(df, name):
+    scopes = [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('share-betting-f978bc9098c1.json', scopes)
+    file = gspread.authorize(credentials)
+    sheet = file.open("Betting")
+    sheet = sheet.worksheet(name)
+
+    rows_count = len(sheet.get_all_values()) + 1
+    cell = f'A{rows_count}'
+
+    url = f'https://docs.google.com/spreadsheets/d/1EE64POwwmAmjIZ3BuaqfHFeOEWrCwGouTxCN-9ounhA/gviz/tq?tqx=out:csv&sheet={name}'
+    temp = pd.read_csv(url)
+
+    if (df.isin(temp[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam']]).all().all()):
+        print(' ====> Already Existist ..')
+        sys.exit('same dataframe..')
+    else:
+        sheet.update(cell, df.values.tolist())
+
 
 def openpage(page):
     """
@@ -464,5 +489,6 @@ if __name__ == '__main__':
 
         print(f'\n----- League {divis} completed.. Going to next one -----\n')
     print('Saving Results..', end='')
-    save_results_excel(results_df, name)
+    #save_results_excel(results_df, name)
+    save_results_online(results_df, 'FullTime')
     print(' ====> Done')
