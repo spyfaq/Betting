@@ -1,7 +1,7 @@
 import pandas as pd
-import sys
 import matplotlib.pyplot as plt
-
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 def download_league_data(url):
     league_data = pd.read_csv(url)
@@ -10,13 +10,14 @@ def download_league_data(url):
     return (league_data)
 
 def match_matched(results, divis):
-    path_ex = f"{name}.xlsx"
-    prediction_Half = pd.read_excel(path_ex, sheet_name='HalfTime', engine='openpyxl')
+    url = f'https://docs.google.com/spreadsheets/d/1EE64POwwmAmjIZ3BuaqfHFeOEWrCwGouTxCN-9ounhA/gviz/tq?tqx=out:csv&sheet=HalfTime'
+    prediction_Half = pd.read_csv(url, decimal=".")
     prediction_Half = prediction_Half.loc[prediction_Half['Division'] == divis]
     prediction_Half['unique'] = prediction_Half['Date'].astype(str) + \
                                 prediction_Half['HomeTeam'].astype(str) + prediction_Half['AwayTeam'].astype(str)
 
-    prediction_Full = pd.read_excel(path_ex, sheet_name='FullTime', engine='openpyxl')
+    url = f'https://docs.google.com/spreadsheets/d/1EE64POwwmAmjIZ3BuaqfHFeOEWrCwGouTxCN-9ounhA/gviz/tq?tqx=out:csv&sheet=FullTime'
+    prediction_Full = pd.read_csv(url, decimal=".")
     prediction_Full = prediction_Full.loc[prediction_Full['Division'] == divis]
     prediction_Full['unique'] = prediction_Full['Date'].astype(str) + \
                                 prediction_Full['HomeTeam'].astype(str) + prediction_Full['AwayTeam'].astype(str)
@@ -77,29 +78,31 @@ def match_matched(results, divis):
     return(final_Half, final_Full)
 
 def update_excel(half, full):
-    path_ex = f"{name}.xlsx"
-
-    writer = pd.ExcelWriter(path_ex, engine='openpyxl')
-
     half['Date'] = pd.to_datetime(half['Date'], format='%d/%m/%Y')
     full['Date'] = pd.to_datetime(full['Date'], format='%d/%m/%Y')
     half.sort_values(by='Date', inplace=True, ascending=True)
     full.sort_values(by='Date', inplace=True, ascending=True)
     half['Date'] = half['Date'].dt.strftime('%d/%m/%Y')
     full['Date'] = full['Date'].dt.strftime('%d/%m/%Y')
+    full.fillna('', inplace=True)
+    half.fillna('', inplace=True)
 
-    half.to_excel(writer, sheet_name='HalfTime', index=False)
-    full.to_excel(writer, sheet_name='FullTime', index=False)
-    writer.save()
-    writer.close()
+    scopes = [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
 
-    half_plot = half.groupby(['Division', 'Outcome']).size().unstack()
-    full_plot = full.groupby(['Division', 'Outcome']).size().unstack()
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('share-betting-f978bc9098c1.json', scopes)
+    file = gspread.authorize(credentials)
+    sheet = file.open("Betting")
+    sheet_full = sheet.worksheet('FullTime')
+    sheet_half = sheet.worksheet('HalfTime')
 
-    plot_show(half_plot, 'HalfTime')
-    plot_show(full_plot, 'FullTime')
+    sheet_full.update('A2', full.values.tolist())
+    sheet_half.update('A2', half.values.tolist())
 
 def plot_show(data, kind):
+    data.drop(data.columns[0], axis=1, inplace=True)
     res = data.div(data.sum(axis=1), axis=0) * 100
 
     ax = res.plot(title=kind, kind="bar", legend=True, stacked=True, width=0.5, grid=True,
@@ -114,7 +117,6 @@ def plot_show(data, kind):
 
 if __name__ == '__main__':
     YEAR = '2122'
-    name = fr'Dixon_Predictions_{YEAR}'
     LEAGUES = {'En PremierLeague': 'E0',
                'En Championship': 'E1',
                'De Bundesliga': 'D1',
