@@ -80,7 +80,7 @@ def solve_parameters_decay(dataset, xi=0, debug=False, init_vals=None, options={
                         ['rho', 'home_adv'],
                         opt_output.x))
 
-def resultdef(result, ht, at, divis, mdata, mtime, stakes):
+def resultdef(result, ht, at, divis, mdata, mtime, stakes, standings):
     under3_5 = result[0][0] + result[0][1] + result[0][2] + result[1][2] + result[0][3] + result[1][0] + result[1][1] + \
                result[2][0] + result[2][1] + result[3][0]
     under2_5 = result[0][0] + result[0][1] + result[0][2] + result[1][0] + result[1][1] + result[2][0]
@@ -92,6 +92,13 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
     home = np.sum(np.tril(result, -1))
     away = np.sum(np.triu(result, 1))
     draw = np.sum(np.diag(result))
+    hO0_5 = result.sum(axis=1)[1] + result.sum(axis=1)[2] + result.sum(axis=1)[3] + result.sum(axis=1)[4] + result.sum(axis=1)[5] + result.sum(axis=1)[6] + result.sum(axis=1)[7]
+    hO1_5 = result.sum(axis=1)[2] + result.sum(axis=1)[3] + result.sum(axis=1)[4] + result.sum(axis=1)[5] + result.sum(axis=1)[6] + result.sum(axis=1)[7]
+    hO2_5 = result.sum(axis=1)[3] + result.sum(axis=1)[4] + result.sum(axis=1)[5] + result.sum(axis=1)[6] + result.sum(axis=1)[7]
+
+    aO0_5 = result.sum(axis=0)[1] + result.sum(axis=0)[2] + result.sum(axis=0)[3] + result.sum(axis=0)[4] + result.sum(axis=0)[5] + result.sum(axis=0)[6] + result.sum(axis=0)[7]
+    aO1_5 = result.sum(axis=0)[2] + result.sum(axis=0)[3] + result.sum(axis=0)[4] + result.sum(axis=0)[5] + result.sum(axis=0)[6] + result.sum(axis=0)[7]
+    aO2_5 = result.sum(axis=0)[3] + result.sum(axis=0)[4] + result.sum(axis=0)[5] + result.sum(axis=0)[6] + result.sum(axis=0)[7]
 
     temp = np.delete(result, 0, 1)
     goalgoal = np.delete(temp, 0, 0)
@@ -103,10 +110,21 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
             '1':home,
             '2':away,
             'X': draw,
-            'GG': gg
+            'GG': gg,
+            'hO0_5': hO0_5,
+            'hO1_5': hO1_5,
+            'hO2_5': hO2_5,
+            'aO0_5': aO0_5,
+            'aO1_5': aO1_5,
+            'aO2_5': aO2_5,
             }
 
-    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
+    outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds',
+                                    'diff %', 'Outcome', 'HG', 'AG',
+                                    'HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against',
+                                    'HT_athome_points', 'HT_athome_wins', 'HT_athome_draws', 'HT_athome_loses',
+                                    'AT_Points', 'AT_Matches', 'AT_away_goal_scored', 'AT_away_goal_against',
+                                    'AT_away_points', 'AT_away_wins', 'AT_away_draws', 'AT_away_loses'])
     for res in dict.keys():
         if dict[res] > 0.66:
             hist_dict = historyfunc(path, ht, at)
@@ -118,9 +136,23 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
                 hist_perc = '-'
 
             try:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, stakes[res]]
+                st_as = stakes[res]
             except:
-                outcome.loc[len(outcome)] = [divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, '-']
+                st_as = '-'
+
+            hmcol = ['HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against', 'HT_athome_points', 'HT_athome_wins',
+                     'HT_athome_draws', 'HT_athome_loses', 'team']
+            homestats = standings[hmcol].loc[standings['team']==ht].drop('team', axis=1).squeeze()
+
+            awcol = ['AT_Points', 'AT_Matches','AT_away_goal_scored', 'AT_away_goal_against', 'AT_away_points', 'AT_away_wins',
+                        'AT_away_draws', 'AT_away_loses', 'team']
+            awaystats = standings[awcol].loc[standings['team'] == at].drop('team', axis=1).squeeze()
+
+            tempser = pd.Series([divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, st_as, '','','',''])
+            tempser = tempser.append([homestats, awaystats])
+            tempser = tempser.tolist()
+
+            outcome.loc[len(outcome)] = tempser
 
     return(outcome)
 
@@ -182,7 +214,21 @@ def save_results_online(df, name):
         'https://www.googleapis.com/auth/drive'
     ]
 
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('share-betting-f978bc9098c1.json', scopes)
+    json_creds = {
+  "type": "service_account",
+  "project_id": "share-betting",
+  "private_key_id": "f978bc9098c12a4d8831bb7102981d37f589a832",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDF0WUc65p8EIeP\nIaNYUmgBWLWoe9gMxyBAhm9wPbFEqL25UvP2PCsihyE0fOnUuwB9chgxVc0imWde\nppyoVmHJ/htGZN8Lk5iTv86Bluqc9d9dNz/fzXRPsYnlr9Sp4WGLBStJKtX70p3G\nDU2fC+c3uIN5+5WDi/7fThnPdBzj/0zkRK+pphdCRly5RPT+/nP1gelOMoKLPwMd\nz2uRpllsc0fbb1VgJ+58mLjOGfk6q23tgdXiSvYAj1LsicapM4A6LMrqrSps3tti\nmDBaS+SGrzSO4OQQyoqeDTErIt+RyCjecatq7vP+AuRYCyEuAjGsidCz9QRZ8yho\n54KIpUQjAgMBAAECggEADpgTMJ4FKLADgEDID0UNHURRKpvwZYjvTTNd11cF0/3q\n+VgwXXM073gur/OjQKmHMLoRJNqiprHQmYALQLQWxNM1ae0ZM35xHD1jW9Ypeuj8\n0KC52qYKtbJwbPya4Omay6nW9q/tV4XDVBA5MMmtBkRbls1Dy4+xfwIBD3gOhZd3\nyYQNHWg8XcI4Eez7LIr9UbSnbQw9xYylHwFW0mRq/uuUL/QBmd0ux1eHFc0fl3+9\noEzNquGQL/1Wvth9Gp6ShIVuj7IJM2p3vezyn1ehkgBoKpkd8JkFn15Mt0kQ4ZJO\naqfUvrnRQllSeH04ls801S9jFErWnXwDKfBMmbIzAQKBgQD7TU1rMBPh11ApuPAF\noK/9cexkh09vBTdJM6FmLWukiYSnXcTWZRXwVZ6Km5tn3rdMpslUhqlcdDsem9Co\nMnzkGatjbzTVAN49j8d+bLDGWAvBSRA82Fib8plEZlp+YtWrvOIxzdXE7qDS4Fjk\nt1Mh//iaMGL4vPIVGBBk2roQgQKBgQDJhCAOccTxstVGbN72mCtQMkIsNkCyUs7g\n2XodjLilx1DxvJwrwShNcIE57yJrNEdNsmSIXRn/jFqgABJxlc984hVVoeDN2lyu\n9SQ3f6yKy+SelVOrUAIzsTprcMRYyLI2IX6QTG4PH8QVSi2L1HbZpawmK5OV8oij\nmYMqfivCowKBgQDv8q+pWQ6i5WO1ctA7j2J7LPv6QPinmONhEdtaJKRTRrtS00XP\nMFXyVM48qreIRi/fEKHMA4hSruiEIWLqNsrpQVlUaCqZ92o8fbyOCloACLGwrILE\nlg6FWO7fUJu3ccdzY7bWtyMWFoOY1n4KZMEMBczp7KmTt1Wurnt40SA4AQKBgGU0\nmCzo8nI40GgIMYpDLi2esCEoNiHY+NFwJ6ZDkFCh44MkqIJJBgauZBhGg1C39r+M\nwnTB3Va8lJ8aqiilhok/ultBa3e3HSk5MLE2y98BO5ZxhI3bJt/zOFXRUqsMUIRj\nGf86g2PRHlda47kAQZhZXjXlWL/MCNexN3DV4QBlAoGAaraexVDmEmAlC8X9RBM3\nOWNdgJAlBWeI10YfaLrRPkYAtO9gqUGBdt+/Hi0bqisWhS8ZbTtTOw698Sbp5DVV\nCAclQHRjVqMcDD/4x5zpSsPaOB+LYvLYqcR5sEjgCPv983W2fn7fIoVDEaK0zE27\n5RDP3PJyQr2ybaSRkY02wD0=\n-----END PRIVATE KEY-----\n",
+  "client_email": "spyfaq-laptop@share-betting.iam.gserviceaccount.com",
+  "client_id": "114439080508189477603",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/spyfaq-laptop%40share-betting.iam.gserviceaccount.com"
+}
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(json_creds)
+    #credentials = ServiceAccountCredentials.from_json_keyfile_name('share-betting-f978bc9098c1.json', scopes)
     file = gspread.authorize(credentials)
     sheet = file.open("Betting")
     sheet = sheet.worksheet(name)
@@ -197,6 +243,7 @@ def save_results_online(df, name):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
+        df.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
         sheet.update(cell, df.values.tolist())
 
 
@@ -299,7 +346,7 @@ def find_fulltime_stake():
 
         stake[temp_r] = temp_s
 
-
+    # over
     prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[2]/div[2]/'
     for i in [1,2,3,4,5,6]:
         path = prefix + f'button[{i}]'
@@ -312,6 +359,33 @@ def find_fulltime_stake():
 
         stake[temp_r] = temp_s
 
+    # home team goals
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[13]/div[2]'
+    for i in [1, 3, 5]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = 'h' + words[2][0] + words[3].replace('.','_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+    #away team goals
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[14]/div[2]'
+    for i in [1, 3, 5]:
+        path = prefix + f'button[{i}]'
+        temp = driver.find_element_by_xpath(path)
+        temp = temp.get_attribute('aria-label')
+
+        words = temp.split(' ')
+        temp_r = 'a' + words[2][0] + words[3].replace('.', '_')
+        temp_s = words[-1][:-1]
+
+        stake[temp_r] = temp_s
+
+    # GG
     temp = driver.find_element_by_xpath(
         f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4 + div}]/div[1]/div/ul/li[3]/div/div')
     ActionChains(driver).move_to_element(temp).click().perform()
@@ -342,6 +416,12 @@ def historyfunc(path, hw, aw):
     ov3_5 = 0
     ov1_5 = 0
     gg = 0
+    hO0_5 = 0
+    hO1_5 = 0
+    hO2_5 = 0
+    aO0_5 = 0
+    aO1_5 = 0
+    aO2_5 = 0
 
     for year in range(1, 5):
 
@@ -383,6 +463,20 @@ def historyfunc(path, hw, aw):
             ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 3:
                 ov3_5 = ov3_5 + 1
 
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) > 0.5:
+                hO0_5 += 1
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) > 1.5:
+                hO1_5 += 1
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTHG'].iloc[0]) > 2.5:
+                hO2_5 += 1
+
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 0.5:
+                aO0_5 += 1
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 1.5:
+                aO1_5 += 1
+            if (ht_found.loc[ht_found["AwayTeam"] == aw]['FTAG'].iloc[0]) > 2.5:
+                aO2_5 += 1
+
         except:
             print(hw, "-", aw, "not played during", bf)
 
@@ -395,6 +489,12 @@ def historyfunc(path, hw, aw):
         perc_o3 = ov3_5 / totalm
         perc_o1 = ov1_5 / totalm
         perc_gg = gg / totalm
+        perc_hO0_5 = hO0_5 / totalm
+        perc_hO1_5 = hO1_5 / totalm
+        perc_hO2_5 = hO2_5 / totalm
+        perc_aO0_5 = aO0_5 / totalm
+        perc_aO1_5 = aO1_5 / totalm
+        perc_aO2_5 = aO2_5 / totalm
 
     else:
         perc_h = '-'
@@ -404,6 +504,12 @@ def historyfunc(path, hw, aw):
         perc_o3 = '-'
         perc_o1 = '-'
         perc_gg = '-'
+        perc_hO0_5 = '-'
+        perc_hO1_5 = '-'
+        perc_hO2_5 = '-'
+        perc_aO0_5 = '-'
+        perc_aO1_5 = '-'
+        perc_aO2_5 = '-'
 
     dict = {'O1_5': perc_o1,
             'O2_5': perc_o,
@@ -412,9 +518,108 @@ def historyfunc(path, hw, aw):
             '2': perc_a,
             'X': perc_d,
             'GG': perc_gg,
+            'hO0_5': perc_hO0_5,
+            'hO1_5': perc_hO1_5,
+            'hO2_5': perc_hO2_5,
+            'aO0_5': perc_aO0_5,
+            'aO1_5': perc_aO1_5,
+            'aO2_5': perc_aO2_5,
             }
 
     return (dict)
+
+def calc_standings(league_data):
+    standings = dict()
+
+    for team in league_data['HomeTeam']:
+        temp = league_data.loc[league_data['HomeTeam'] == team]['FTR'].value_counts()
+        try:
+            lose = temp['A']
+        except:
+            lose = 0
+
+        try:
+            win = temp['H']
+        except:
+            win = 0
+
+        try:
+            draw = temp['D']
+        except:
+            draw = 0
+
+        Standings[team] = {'Home':
+                               {'Win': win,
+                                'Draw': draw,
+                                'Lose': lose,
+                                'Scored':(league_data.loc[league_data['HomeTeam'] == team]['HomeGoals']).sum(),
+                                'Eaten':(league_data.loc[league_data['HomeTeam'] == team]['AwayGoals']).sum(),
+                                'Points': (win * 3) + draw,
+                                'Matches': win + draw + lose
+                                }
+                           }
+
+    for team in league_data['AwayTeam'] :
+        temp = league_data.loc[league_data['AwayTeam'] == team]['FTR'].value_counts()
+        try:
+            lose = temp['H']
+        except:
+            lose = 0
+
+        try:
+            win = temp['A']
+        except:
+            win = 0
+
+        try:
+            draw = temp['D']
+        except:
+            draw = 0
+
+        Standings[team].update({'Away':
+                               {'Win': win,
+                                'Draw': draw,
+                                'Lose': lose,
+                                'Scored':(league_data.loc[league_data['AwayTeam'] == team]['AwayGoals']).sum(),
+                                'Eaten': (league_data.loc[league_data['AwayTeam'] == team]['HomeGoals']).sum(),
+                                'Points': (win * 3) + draw
+                                }
+                           })
+
+    for team in Standings.keys():
+        Standings[team].update({'Sum':
+                                    {
+                                    'Win': Standings[team]['Home']['Win']+Standings[team]['Away']['Win'],
+                                    'Draw': Standings[team]['Home']['Draw']+Standings[team]['Away']['Draw'],
+                                    'Lose': Standings[team]['Home']['Lose']+Standings[team]['Away']['Lose'],
+                                    'Scored': Standings[team]['Home']['Scored']+Standings[team]['Away']['Scored'],
+                                    'Eaten': Standings[team]['Home']['Eaten'] + Standings[team]['Away']['Eaten'],
+                                    'Points': Standings[team]['Home']['Points'] + Standings[team]['Away']['Points']
+                                    }
+                                })
+
+        standings[team] = { 'Points': Standings[team]['Sum']['Points'],
+                            'Matches': (Standings[team]['Home']['Win'] + Standings[team]['Home']['Draw'] + Standings[team]['Home']['Lose'] +
+                                        Standings[team]['Away']['Win'] + Standings[team]['Away']['Draw'] + Standings[team]['Away']['Lose']),
+                            'athome_goal_scored': Standings[team]['Home']['Scored'],
+                            'athome_goal_against': Standings[team]['Home']['Eaten'],
+                            'athome_points': Standings[team]['Home']['Points'],
+                            'athome_wins': Standings[team]['Home']['Win'],
+                            'athome_draws': Standings[team]['Home']['Draw'],
+                            'athome_loses': Standings[team]['Home']['Lose'],
+                            'away_goal_scored': Standings[team]['Away']['Scored'],
+                            'away_goal_against': Standings[team]['Away']['Eaten'],
+                            'away_points': Standings[team]['Away']['Points'],
+                            'away_wins': Standings[team]['Away']['Win'],
+                            'away_draws': Standings[team]['Away']['Draw'],
+                            'away_loses': Standings[team]['Away']['Lose']
+                        }
+
+    temp = pd.DataFrame(standings)
+    standings_df = temp.transpose()
+    standings_df.sort_values(['Points'], inplace=True, ascending=False)
+    standings_df['team']=standings_df.index
+    return(standings_df)
 
 if __name__ == '__main__':
     YEAR = '2122'
@@ -458,6 +663,11 @@ if __name__ == '__main__':
         league_data = download_league_data(path)
         print(' ====> Done')
 
+        print(f'Calculating standings for {divis}..', end='')
+        Standings = {}
+        standings_df = calc_standings(league_data)
+        print(' ====> Done')
+
         print(f'Calculating parameters decay for {divis}..', end='')
         params = solve_parameters_decay(league_data)
         print(' ====> Done')
@@ -483,12 +693,23 @@ if __name__ == '__main__':
 
 
             result = dixon_coles_simulate_match(params, ht, at)
-            res = resultdef(result, ht, at, divis, mdate, mtime, fulltime_stakes)
+            res = resultdef(result, ht, at, divis, mdate, mtime, fulltime_stakes, standings_df)
             results_df = pd.concat([results_df, res])
             print(res)
 
         print(f'\n----- League {divis} completed.. Going to next one -----\n')
     print('Saving Results..', end='')
     #save_results_excel(results_df, name)
-    save_results_online(results_df, 'FullTime')
+
+    def alphas(row):
+        try:
+            stoix = float(row['Odds'].values())
+            mine = float(row['Prediction %'].values())
+            tempvar = round(((1/stoix)-mine)/(1/stoix)*100,0)
+            return(tempvar)
+        except:
+            return('-')
+
+    results_df['diff %'] = results_df.apply(lambda row: alphas(row), axis=1)
+    save_results_online(results_df, 'extra')
     print(' ====> Done')
