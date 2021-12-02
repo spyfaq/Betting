@@ -203,6 +203,7 @@ def save_results_online(df, name):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
+        df.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
         sheet.update(cell, df.values.tolist())
 
 def openpage(page):

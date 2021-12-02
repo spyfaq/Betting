@@ -16,7 +16,7 @@ def match_matched(results, divis):
     prediction_Half['unique'] = prediction_Half['Date'].astype(str) + \
                                 prediction_Half['HomeTeam'].astype(str) + prediction_Half['AwayTeam'].astype(str)
 
-    url = f'https://docs.google.com/spreadsheets/d/1EE64POwwmAmjIZ3BuaqfHFeOEWrCwGouTxCN-9ounhA/gviz/tq?tqx=out:csv&sheet=FullTime'
+    url = f'https://docs.google.com/spreadsheets/d/1EE64POwwmAmjIZ3BuaqfHFeOEWrCwGouTxCN-9ounhA/gviz/tq?tqx=out:csv&sheet=extra'
     prediction_Full = pd.read_csv(url, decimal=".")
     prediction_Full = prediction_Full.loc[prediction_Full['Division'] == divis]
     prediction_Full['unique'] = prediction_Full['Date'].astype(str) + \
@@ -95,12 +95,19 @@ def match_matched(results, divis):
 def update_excel(half, full):
     half['Date'] = pd.to_datetime(half['Date'], format='%d/%m/%Y')
     full['Date'] = pd.to_datetime(full['Date'], format='%d/%m/%Y')
-    half.sort_values(by='Date', inplace=True, ascending=True)
-    full.sort_values(by='Date', inplace=True, ascending=True)
+    half.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
+    full.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
     half['Date'] = half['Date'].dt.strftime('%d/%m/%Y')
     full['Date'] = full['Date'].dt.strftime('%d/%m/%Y')
     full.fillna('', inplace=True)
     half.fillna('', inplace=True)
+
+    full_cor_column = full[['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds',
+                                    'diff %', 'Outcome', 'HG', 'AG',
+                                    'HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against',
+                                    'HT_athome_points', 'HT_athome_wins', 'HT_athome_draws', 'HT_athome_loses',
+                                    'AT_Points', 'AT_Matches', 'AT_away_goal_scored', 'AT_away_goal_against',
+                                    'AT_away_points', 'AT_away_wins', 'AT_away_draws', 'AT_away_loses']]
 
     scopes = [
         'https://www.googleapis.com/auth/spreadsheets',
@@ -124,10 +131,10 @@ def update_excel(half, full):
     #credentials = ServiceAccountCredentials.from_json_keyfile_name('share-betting-f978bc9098c1.json', scopes)
     file = gspread.authorize(credentials)
     sheet = file.open("Betting")
-    sheet_full = sheet.worksheet('FullTime')
+    sheet_full = sheet.worksheet('extra')
     sheet_half = sheet.worksheet('HalfTime')
 
-    sheet_full.update('A2', full.values.tolist())
+    sheet_full.update('A2', full_cor_column.values.tolist())
     sheet_half.update('A2', half.values.tolist())
 
 def plot_show(data, kind):

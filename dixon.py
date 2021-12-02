@@ -121,10 +121,10 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes, standings):
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds',
                                     'diff %', 'Outcome', 'HG', 'AG',
-                                    'Points', 'Matches', 'athome_goal_scored', 'athome_goal_against',
-                                    'athome_points', 'athome_wins', 'athome_draws', 'athome_loses',
-                                    'Points', 'Matches', 'away_goal_scored', 'away_goal_against',
-                                    'away_points', 'away_wins', 'away_draws', 'away_loses'])
+                                    'HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against',
+                                    'HT_athome_points', 'HT_athome_wins', 'HT_athome_draws', 'HT_athome_loses',
+                                    'AT_Points', 'AT_Matches', 'AT_away_goal_scored', 'AT_away_goal_against',
+                                    'AT_away_points', 'AT_away_wins', 'AT_away_draws', 'AT_away_loses'])
     for res in dict.keys():
         if dict[res] > 0.66:
             hist_dict = historyfunc(path, ht, at)
@@ -140,12 +140,12 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes, standings):
             except:
                 st_as = '-'
 
-            hmcol = ['Points', 'Matches', 'athome_goal_scored', 'athome_goal_against', 'athome_points', 'athome_wins',
-                     'athome_draws', 'athome_loses', 'team']
+            hmcol = ['HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against', 'HT_athome_points', 'HT_athome_wins',
+                     'HT_athome_draws', 'HT_athome_loses', 'team']
             homestats = standings[hmcol].loc[standings['team']==ht].drop('team', axis=1).squeeze()
 
-            awcol = ['Points', 'Matches','away_goal_scored', 'away_goal_against', 'away_points', 'away_wins',
-                        'away_draws', 'away_loses', 'team']
+            awcol = ['AT_Points', 'AT_Matches','AT_away_goal_scored', 'AT_away_goal_against', 'AT_away_points', 'AT_away_wins',
+                        'AT_away_draws', 'AT_away_loses', 'team']
             awaystats = standings[awcol].loc[standings['team'] == at].drop('team', axis=1).squeeze()
 
             tempser = pd.Series([divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, st_as, '','','',''])
@@ -243,6 +243,7 @@ def save_results_online(df, name):
         print(' ====> Already Existist ..')
         sys.exit('same dataframe..')
     else:
+        df.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
         sheet.update(cell, df.values.tolist())
 
 
