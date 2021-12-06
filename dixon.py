@@ -140,13 +140,20 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes, standings):
             except:
                 st_as = '-'
 
-            hmcol = ['HT_Points', 'HT_Matches', 'HT_athome_goal_scored', 'HT_athome_goal_against', 'HT_athome_points', 'HT_athome_wins',
-                     'HT_athome_draws', 'HT_athome_loses', 'team']
-            homestats = standings[hmcol].loc[standings['team']==ht].drop('team', axis=1).squeeze()
+            hmcol = ['Points', 'Matches', 'athome_goal_scored', 'athome_goal_against', 'athome_points', 'athome_wins',
+                     'athome_draws', 'athome_loses', 'team']
+            homestats = standings[hmcol].loc[standings['team']==ht]
+            homestats = homestats.drop('team', axis=1)
+            homestats = homestats.add_prefix('HT_')
+            homestats=homestats.squeeze()
 
-            awcol = ['AT_Points', 'AT_Matches','AT_away_goal_scored', 'AT_away_goal_against', 'AT_away_points', 'AT_away_wins',
-                        'AT_away_draws', 'AT_away_loses', 'team']
-            awaystats = standings[awcol].loc[standings['team'] == at].drop('team', axis=1).squeeze()
+
+            awcol = ['Points', 'Matches','away_goal_scored', 'away_goal_against', 'away_points', 'away_wins',
+                        'away_draws', 'away_loses', 'team']
+            awaystats = standings[awcol].loc[standings['team'] == at]
+            awaystats = awaystats.drop('team', axis=1)
+            awaystats = awaystats.add_prefix('AT_')
+            awaystats = awaystats.squeeze()
 
             tempser = pd.Series([divis, mdata, mtime, ht, at, res, dict[res].round(2), hist_perc, Weighted, st_as, '','','',''])
             tempser = tempser.append([homestats, awaystats])
@@ -255,7 +262,7 @@ def openpage(page):
     global driver
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
-    #driver.minimize_window()
+    driver.minimize_window()
     return()
 
 def banners():
@@ -360,7 +367,7 @@ def find_fulltime_stake():
         stake[temp_r] = temp_s
 
     # home team goals
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[13]/div[2]'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[13]/div[2]/'
     for i in [1, 3, 5]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -373,7 +380,7 @@ def find_fulltime_stake():
         stake[temp_r] = temp_s
 
     #away team goals
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[14]/div[2]'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[14]/div[2]/'
     for i in [1, 3, 5]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -702,14 +709,15 @@ if __name__ == '__main__':
     #save_results_excel(results_df, name)
 
     def alphas(row):
-        try:
-            stoix = float(row['Odds'].values())
-            mine = float(row['Prediction %'].values())
-            tempvar = round(((1/stoix)-mine)/(1/stoix)*100,0)
-            return(tempvar)
-        except:
-            return('-')
+        if row['Odds'] == '-':
+            return ('')
+        else:
+            stoix = float(row['Odds'].replace(',', '.'))
+            mine = float(row['Prediction %'].replace(',', '.'))
+
+        tempvar = round(((1 / stoix) - mine) / (1 / stoix) * 100, 0)
+        return (tempvar)
 
     results_df['diff %'] = results_df.apply(lambda row: alphas(row), axis=1)
-    save_results_online(results_df, 'extra')
+    save_results_online(results_df, 'FullTime')
     print(' ====> Done')
