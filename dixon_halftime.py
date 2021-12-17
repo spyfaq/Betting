@@ -111,7 +111,7 @@ def resultdef(result, ht, at, divis, mdata, mtime, stakes):
 
     outcome = pd.DataFrame(columns=['Division', 'Date', 'Time', 'HomeTeam', 'AwayTeam', 'Prediction', 'Prediction %', 'History %', 'Weighted %', 'Odds'])
     for res in dict.keys():
-        if dict[res] > 0.66:
+        if dict[res] > 0.6:
             hist_dict = historyfunc(path, ht, at)
             try:
                 hist_perc = round(hist_dict[res], 2)
@@ -214,7 +214,7 @@ def openpage(page):
     global driver
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
-    #driver.minimize_window()
+    driver.minimize_window()
     return()
 
 def banners():
@@ -413,7 +413,6 @@ if __name__ == '__main__':
                'Bg JupilerLeague': 'B1',
                'Pr Liga I': 'P1',
                'Gr SuperLeague': 'G1',
-               'SC PremierLeague': 'SC1',
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',

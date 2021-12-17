@@ -163,7 +163,6 @@ if __name__ == '__main__':
                'Bg JupilerLeague': 'B1',
                'Pr Liga I': 'P1',
                'Gr SuperLeague': 'G1',
-               'SC PremierLeague': 'SC1',
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',

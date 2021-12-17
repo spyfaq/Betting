@@ -319,7 +319,7 @@ def find_fulltime_stake():
 
     stake = dict()
 
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[2]/'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[1]/div[2]/'
     for i in [1, 2, 3]:
         path = prefix + f'div[{i}]/div/button'
 
@@ -341,7 +341,7 @@ def find_fulltime_stake():
     ActionChains(driver).move_to_element(temp).click().perform()
     sleep(2)
 
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[2]/'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[1]/div[2]/'
     for i in [1,2]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -354,7 +354,7 @@ def find_fulltime_stake():
         stake[temp_r] = temp_s
 
     # over
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[2]/div[2]/'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[2]/div[2]/'
     for i in [1,2,3,4,5,6]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -367,7 +367,7 @@ def find_fulltime_stake():
         stake[temp_r] = temp_s
 
     # home team goals
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[13]/div[2]/'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[13]/div[2]/'
     for i in [1, 3, 5]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -380,7 +380,7 @@ def find_fulltime_stake():
         stake[temp_r] = temp_s
 
     #away team goals
-    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[14]/div[2]/'
+    prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[14]/div[2]/'
     for i in [1, 3, 5]:
         path = prefix + f'button[{i}]'
         temp = driver.find_element_by_xpath(path)
@@ -398,7 +398,7 @@ def find_fulltime_stake():
     ActionChains(driver).move_to_element(temp).click().perform()
     sleep(2)
 
-    path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[2]/button[1]'
+    path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[1]/div[2]/button[1]'
     temp = driver.find_element_by_xpath(path)
     temp = temp.get_attribute('aria-label')
 
@@ -641,7 +641,6 @@ if __name__ == '__main__':
                'Bg JupilerLeague': 'B1',
                'Pr Liga I': 'P1',
                'Gr SuperLeague': 'G1',
-               'SC PremierLeague': 'SC1',
                'De Bundesliga 2': 'D2',
                'It Serie B': 'I2',
                'Sp Segunda': 'SP2',
@@ -693,7 +692,7 @@ if __name__ == '__main__':
                 find_match(ht, at)
                 fulltime_stakes = find_fulltime_stake()
             except:
-                fulltime_stakes = '-'
+                fulltime_stakes = -1
 
             driver.close()
             sleep(2)
@@ -712,10 +711,18 @@ if __name__ == '__main__':
         if row['Odds'] == '-':
             return ('')
         else:
-            stoix = float(row['Odds'].replace(',', '.'))
-            mine = float(row['Prediction %'].replace(',', '.'))
+            try:
+                stoix = float(row['Odds'].replace(',', '.'))
+                mine = float(row['Prediction %'].replace(',', '.'))
+            except:
+                stoix = float(row['Odds'])
+                mine = float(row['Prediction %'])
 
-        tempvar = round(((1 / stoix) - mine) / (1 / stoix) * 100, 0)
+        try:
+            tempvar = round((stoix - (1 / mine)) * 100, 2)
+        except:
+            tempvar = '-'
+
         return (tempvar)
 
     results_df['diff %'] = results_df.apply(lambda row: alphas(row), axis=1)
