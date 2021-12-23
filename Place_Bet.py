@@ -11,7 +11,7 @@ def openpage(page):
     driver = webdriver.Chrome(executable_path="D:\Python Apps\other reqs\chromedriver.exe")
     driver.get(page)
     #driver.minimize_window()
-    return()
+    return(driver)
 
 def banners():
     sleep(3)
@@ -47,11 +47,11 @@ def find_match(home, away):
     sleep(1)
     temp = driver.find_element(By.XPATH,'//div[@class="sb-header__header__actions__search-icon GTM-search"]')
     ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
 
     search = home + ' - ' + away
-    sleep(2)
     driver.find_element(By.XPATH,'//*[@id="search-modal"]/div/div[1]/input').send_keys(search)
-    sleep(2)
+    sleep(4)
     try:
         driver.find_element(By.XPATH,'//*[@id="search-modal"]/div/div[2]/div[1]/div[2]/div[1]/div[2]/span')
         return(False)
@@ -65,6 +65,7 @@ def find_match(home, away):
         return (False)
 
 def go_to_over_tab(div):
+    '/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[4]/div[1]/div/ul/li[2]/div/div'
     temp = driver.find_element(By.XPATH,f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{4+div}]/div[1]/div/ul/li[2]/div/div')
     ActionChains(driver).move_to_element(temp).click().perform()
     sleep(2)
@@ -81,7 +82,7 @@ def place_bet(bet):
 
     if 'a' in bet:
         go_to_over_tab(div)
-        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[14]/div[2]/'
+        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[14]/div[2]/'
         for i in [1, 3, 5]:
             path = prefix + f'button[{i}]'
             temp = driver.find_element(By.XPATH,path)
@@ -91,12 +92,13 @@ def place_bet(bet):
             results_odd = words[-1][:-1]
 
             if results == bet:
-                driver.find_element(By.XPATH, path).click()
+                temp = driver.find_element(By.XPATH, path)
+                ActionChains(driver).move_to_element(temp).click().perform()
                 return ([results, results_odd])
 
     elif 'h' in bet:
         go_to_over_tab(div)
-        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[13]/div[2]/'
+        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[13]/div[2]/'
         for i in [1, 3, 5]:
             path = prefix + f'button[{i}]'
             temp = driver.find_element(By.XPATH,path)
@@ -106,12 +108,14 @@ def place_bet(bet):
             results_odd = words[-1][:-1]
 
             if results == bet:
-                driver.find_element(By.XPATH, path).click()
+                temp = driver.find_element(By.XPATH, path)
+                ActionChains(driver).move_to_element(temp).click().perform()
+                sleep(2)
                 return ([results, results_odd])
 
     elif 'O' in bet:
         go_to_over_tab(div)
-        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[2]/div[2]/'
+        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[2]/div[2]/'
         for i in [1,2,3,4,5,6]:
             path = prefix + f'button[{i}]'
             temp = driver.find_element(By.XPATH,path)
@@ -121,10 +125,11 @@ def place_bet(bet):
             results_odd = words[-1][:-1]
 
             if results == bet:
-                driver.find_element(By.XPATH, path).click()
+                temp = driver.find_element(By.XPATH, path)
+                ActionChains(driver).move_to_element(temp).click().perform()
                 return ([results, results_odd])
 
-        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[2]/'
+        prefix = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[1]/div[1]/div[2]/'
         for i in [1, 2]:
             path = prefix + f'button[{i}]'
             temp = driver.find_element(By.XPATH,path)
@@ -134,7 +139,8 @@ def place_bet(bet):
             results_odd = words[-1][:-1]
 
             if results == bet:
-                driver.find_element(By.XPATH, path).click()
+                temp = driver.find_element(By.XPATH, path)
+                ActionChains(driver).move_to_element(temp).click().perform()
                 return ([results, results_odd])
 
     elif 'GG' in bet:
@@ -143,8 +149,9 @@ def place_bet(bet):
         ActionChains(driver).move_to_element(temp).click().perform()
         sleep(2)
 
-        path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[2]/button[1]'
-        driver.find_element(By.XPATH, path).click()
+        path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[1]/div[1]/div[2]/button[1]'
+        temp = driver.find_element(By.XPATH, path)
+        ActionChains(driver).move_to_element(temp).click().perform()
 
         temp = driver.find_element(By.XPATH,path)
         temp = temp.get_attribute('aria-label')
@@ -155,8 +162,9 @@ def place_bet(bet):
 
     else:
         if '1' in bet:
-            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[{1 + div}]/div[2]/div[1]/div/button'
-            driver.find_element(By.XPATH, path).click()
+            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[1]/div[2]/div[1]/div/button'
+            temp = driver.find_element(By.XPATH, path)
+            ActionChains(driver).move_to_element(temp).click().perform()
 
             temp = driver.find_element(By.XPATH,path)
             temp = temp.get_attribute('aria-label')
@@ -166,8 +174,9 @@ def place_bet(bet):
             return ([results,results_odd])
 
         elif '2' in bet:
-            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[{1 + div}]/div[2]/div[2]/div/button'
-            driver.find_element(By.XPATH, path).click()
+            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6+div}]/div[{1+div}]/div[1]/div[2]/div[3]/div/button'
+            temp = driver.find_element(By.XPATH, path)
+            ActionChains(driver).move_to_element(temp).click().perform()
 
             temp = driver.find_element(By.XPATH, path)
             temp = temp.get_attribute('aria-label')
@@ -177,8 +186,9 @@ def place_bet(bet):
             return ([results, results_odd])
 
         elif 'X' in bet:
-            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[{1 + div}]/div[2]/div[3]/div/button'
-            driver.find_element(By.XPATH, path).click()
+            path = f'/html/body/div[1]/div/section[2]/div[4]/div[2]/section/div[{6 + div}]/div[{1 + div}]/div[1]/div[2]/div[2]/div/button'
+            temp = driver.find_element(By.XPATH, path)
+            ActionChains(driver).move_to_element(temp).click().perform()
 
             temp = driver.find_element(By.XPATH, path)
             temp = temp.get_attribute('aria-label')
@@ -194,6 +204,11 @@ def load_daily_predictions():
     todays_match = df.loc[(df['Date'] == today) & (df['Odds'] != '-')]
     return (todays_match)
 
+def redirect_home():
+    temp = driver.find_element(By.XPATH, '/html/body/div[1]/div/section[2]/section/header/div[1]/div[1]/a/div/img')
+    ActionChains(driver).move_to_element(temp).click().perform()
+    sleep(2)
+    return()
 
 def main():
     tobet = load_daily_predictions()
@@ -209,15 +224,32 @@ def main():
     #login()
 
     bets = list()
+    count = 1
     for prediction in tobet.index:
         ht = tobet['HomeTeam'][prediction]
         at = tobet['AwayTeam'][prediction]
         point = tobet['Prediction'][prediction]
 
         if find_match(ht, at):
-            bets.append(place_bet(point))
+            plaved = place_bet(point)
+            betst = f'{ht}-{at}: {plaved}'
+            bets.append(plaved)
+            print(count, betst)
+            count += 1
 
-        print(bets)
+        redirect_home()
+
+        if count == 21:
+            while True:
+                print('Too many matches.. Place bet on first 20 and press "next"')
+                x = input()
+                if x == 'next':
+                    count = 1
+                    openpage("https://en.stoiximan.gr/")
+                    banners()
+                    break
+
+    print(bets)
 
 
 

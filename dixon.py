@@ -686,8 +686,9 @@ if __name__ == '__main__':
             mtime = next_match['Time'][match]
 
 
-            openpage("https://en.stoiximan.gr/")
+
             try:
+                openpage("https://en.stoiximan.gr/")
                 banners()
                 find_match(ht, at)
                 fulltime_stakes = find_fulltime_stake()

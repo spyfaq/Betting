@@ -452,8 +452,10 @@ if __name__ == '__main__':
             mtime = next_match['Time'][match]
 
 
-            openpage("https://en.stoiximan.gr/")
+
+
             try:
+                openpage("https://en.stoiximan.gr/")
                 banners()
                 find_match(ht, at)
                 halftime_stakes = find_halftime_stake()
