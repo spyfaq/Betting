@@ -8,19 +8,26 @@ results_df = pd.read_csv(name)
 
 
 def alphas(row):
-
     if row['Odds'] == '-':
         return ('')
     else:
-        stoix = float(row['Odds'].replace(',','.'))
-        mine = float(row['Prediction %'].replace(',','.'))
+        try:
+            stoix = float(row['Odds'].replace(',', '.'))
+            mine = float(row['Prediction %'].replace(',', '.'))
+        except:
+            stoix = float(row['Odds'])
+            mine = float(row['Prediction %'])
 
-    tempvar = round((mine - (1 / stoix)) / (1 / stoix) * 100, 0)
+    try:
+        tempvar = round((stoix - (1/mine))*100,2)
+    except:
+        tempvar = '-'
+
     return (tempvar)
 
 results_df['diff %'] = results_df.apply(lambda row: alphas(row), axis=1)
 
-print(results_df)
+
 results_df['Date'] = pd.to_datetime(results_df['Date'], format='%d/%m/%Y')
 results_df.sort_values(by=['Date', 'Time', 'HomeTeam'], inplace=True, ascending=True)
 results_df['Date'] = results_df['Date'].dt.strftime('%d/%m/%Y')
