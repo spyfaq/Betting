@@ -459,11 +459,10 @@ if __name__ == '__main__':
                 banners()
                 find_match(ht, at)
                 halftime_stakes = find_halftime_stake()
+                driver.close()
             except:
                 halftime_stakes = '-'
 
-            driver.close()
-            sleep(2)
 
 
             result = dixon_coles_simulate_match(params, ht, at)

@@ -692,11 +692,9 @@ if __name__ == '__main__':
                 banners()
                 find_match(ht, at)
                 fulltime_stakes = find_fulltime_stake()
+                driver.close()
             except:
                 fulltime_stakes = -1
-
-            driver.close()
-            sleep(2)
 
 
             result = dixon_coles_simulate_match(params, ht, at)
